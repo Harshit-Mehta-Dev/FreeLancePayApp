@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { jwt } from 'hono/jwt';
+import { secureHeaders } from 'hono/secure-headers';
 import { getCookie, setCookie } from 'hono/cookie';
 import bcrypt from 'bcryptjs';
 import * as jose from 'jose';
@@ -8,16 +8,55 @@ import { encrypt, decrypt } from './worker-encryption.js';
 
 const app = new Hono();
 
+// 1. BANK-LEVEL SECURITY HEADERS
+app.use('*', secureHeaders());
+
+// 2. STRICT ORIGIN LOCKDOWN
+const ALLOWED_ORIGIN = 'https://freelance-pay-cloud.pages.dev';
+
+// 3. INTELLIGENT RATE LIMITER (In-Memory per Isolate)
+const rateLimitMap = new Map();
+const RATE_LIMIT = 100; // 100 requests per minute
+
+app.use('*', async (c, next) => {
+  const ip = c.req.header('CF-Connecting-IP') || '127.0.0.1';
+  const now = Date.now();
+  const userData = rateLimitMap.get(ip) || { count: 0, startTime: now };
+
+  if (now - userData.startTime > 60000) {
+    userData.count = 1;
+    userData.startTime = now;
+  } else {
+    userData.count++;
+  }
+  rateLimitMap.set(ip, userData);
+
+  if (userData.count > RATE_LIMIT) {
+    await logSecurityEvent(c, 'RATE_LIMIT_EXCEEDED', ip, `IP blocked for 1 minute`);
+    return c.json({ error: 'Too many requests. Please try again later.' }, 429);
+  }
+
+  const origin = c.req.header('Origin');
+  if (origin && origin !== ALLOWED_ORIGIN) {
+    console.warn(`Blocked request from unauthorized origin: ${origin}`);
+    return c.json({ error: 'Security Violation: Origin not permitted' }, 403);
+  }
+  await next();
+});
+
+app.use('*', cors({
+  origin: ALLOWED_ORIGIN,
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 600,
+}));
+
 app.get('/', (c) => c.json({ 
   message: 'FreeLancePay Cloud API is Live', 
   status: 'Healthy',
+  security: 'Super-Secure Multi-Layered Mode ACTIVE',
   documentation: 'https://freelance-pay-cloud.pages.dev/legal'
-}));
-
-// Middleware
-app.use('*', cors({
-  origin: (origin) => origin,
-  credentials: true,
 }));
 
 const ADMIN_EMAIL = 'harshitmehta1012@gmail.com';
@@ -72,14 +111,26 @@ app.post('/api/auth/register', async (c) => {
 
 app.post('/api/auth/login', async (c) => {
   const { email, password } = await c.req.json();
+  const ip = c.req.header('CF-Connecting-IP') || 'Unknown';
+  
   const user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first();
-  if (!user || !(await bcrypt.compare(password, user.password))) return c.json({ error: 'Invalid credentials' }, 401);
+  
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    await logSecurityEvent(c, 'AUTH_FAILURE', ip, `Failed login attempt for: ${email}`);
+    return c.json({ error: 'Invalid credentials' }, 401);
+  }
 
   const role = isRootAdmin(email) ? 'admin' : (user.role || 'user');
   const token = await new jose.SignJWT({ id: user.id, email: user.email, name: user.name, role })
     .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('7d').sign(new TextEncoder().encode(c.env.JWT_SECRET));
 
-  setCookie(c, 'fp_token', token, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 60 * 60 * 24 * 7 });
+  setCookie(c, 'fp_token', token, { 
+    httpOnly: true, 
+    secure: true, 
+    sameSite: 'Strict', 
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/'
+  });
   return c.json({ user: { id: user.id, name: user.name, email: user.email, currency: user.currency, role } });
 });
 
@@ -127,7 +178,13 @@ app.get('/api/auth/google/callback', async (c) => {
     const token = await new jose.SignJWT({ id: user.id, email: user.email, name: user.name, role: user.role })
       .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('7d').sign(new TextEncoder().encode(c.env.JWT_SECRET));
 
-    setCookie(c, 'fp_token', token, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 60 * 60 * 24 * 7 });
+    setCookie(c, 'fp_token', token, { 
+      httpOnly: true, 
+      secure: true, 
+      sameSite: 'Strict', 
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/'
+    });
     
     // Dynamic redirect back to the app
     const appOrigin = 'https://freelance-pay-cloud.pages.dev';
