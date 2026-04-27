@@ -81,6 +81,24 @@ npx wrangler dev
 npx wrangler d1 execute freelance-pay-db --file=server/schema.sql --local
 ```
 
+## ⚙️ CI/CD & Automated Deployment
+
+This repository is equipped with **GitHub Actions** for fully automated deployments. Every time you push to the `main` branch, the following happens:
+1.  **Backend**: The Cloudflare Worker is updated and deployed.
+2.  **Frontend**: The React app is built and deployed to Cloudflare Pages.
+
+### 🔑 Required GitHub Secrets
+To enable this, go to **Settings > Secrets and variables > Actions** in your GitHub repo and add:
+- `CLOUDFLARE_API_TOKEN`: Your Cloudflare API Token (with Edit Workers/Pages permissions).
+- `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare Account ID.
+
+---
+
+## 🌎 Deployment Environments
+You can track your deployments directly in the GitHub **"Deployments"** sidebar:
+- **Production**: [https://freelance-pay-cloud.pages.dev/](https://freelance-pay-cloud.pages.dev/)
+- **API Edge**: [https://freelance-pay-api.cyber-freelance.workers.dev](https://freelance-pay-api.cyber-freelance.workers.dev)
+
 ---
 
 ## 🛠️ Security First
