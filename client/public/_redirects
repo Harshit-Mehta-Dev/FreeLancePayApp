@@ -1,0 +1,2 @@
+/api/* https://freelance-pay-api.cyber-freelance.workers.dev/api/:splat 200
+/download/* https://freelance-pay-api.cyber-freelance.workers.dev/download/:splat 200

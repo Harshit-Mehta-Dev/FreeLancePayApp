@@ -1,0 +1,43 @@
+services:
+  server:
+    build: ./server
+    ports:
+      - "5175:5175"
+    volumes:
+      - ./server/data:/app/data
+    environment:
+      - PORT=5175
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET:-cyber_cloud_secure_vault_99}
+      - MONGO_URI=mongodb://mongodb:27017/freelance_pay_vault
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5175/api/public/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: always
+
+  client:
+    build: ./client
+    ports:
+      - "5174:5173"
+    environment:
+      - VITE_PROXY_TARGET=http://server:5175
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: always
+
+volumes:
+  mongodb_data:

@@ -1,0 +1,11 @@
+name = "freelance-pay-api"
+main = "worker.js"
+compatibility_date = "2024-04-27"
+
+[vars]
+NODE_ENV = "production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "freelance-pay-db"
+database_id = "d56d891a-fd2d-42e0-bc0a-03657498f994"

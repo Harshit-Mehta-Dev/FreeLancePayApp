@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: freelance-db-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: freelance-pay
+  labels:
+    app: freelance-pay
+spec:
+  replicas: 1 # Changed to 1 for SQLite consistency (RWO)
+  selector:
+    matchLabels:
+      app: freelance-pay
+  strategy:
+    type: Recreate # Use Recreate for SQLite to avoid file lock issues
+  template:
+    metadata:
+      labels:
+        app: freelance-pay
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000 # Ensure volume permissions
+      containers:
+      - name: app
+        image: freelance-pay:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: jwt-secret
+        volumeMounts:
+        - name: db-storage
+          mountPath: /app/server/data
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/public/stats
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 15
+      volumes:
+      - name: db-storage
+        persistentVolumeClaim:
+          claimName: freelance-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: freelance-pay-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 5000
+  selector:
+    app: freelance-pay
