@@ -913,32 +913,40 @@ app.patch('/api/notifications/read-all', auth, async (c) => {
 app.post('/api/auth/export-token', auth, async (c) => {
   const user = c.get('user');
   const { format } = await c.req.json();
-  const token = crypto.randomUUID();
   
-  downloadTokens.set(token, {
-    uid: user.id,
+  // Create a secure, short-lived export token (stateless)
+  const exportToken = await new jose.SignJWT({ 
+    uid: user.id, 
     format: format,
-    expires: Date.now() + 60_000
-  });
+    type: 'export'
+  })
+  .setProtectedHeader({ alg: 'HS256' })
+  .setIssuedAt()
+  .setExpirationTime('2m') // 2 minutes to click the link
+  .sign(new TextEncoder().encode(c.env.JWT_SECRET));
 
-  // Self-cleaning
-  setTimeout(() => downloadTokens.delete(token), 65_000);
-
-  return c.json({ token });
+  return c.json({ token: exportToken });
 });
 
 app.get('/api/download', async (c) => {
   const token = c.req.query('token');
-  const entry = downloadTokens.get(token);
+  if (!token) return c.html('<h2>Missing download token.</h2>', 400);
 
-  if (!entry || Date.now() > entry.expires) {
+  let payload;
+  try {
+    const { payload: verifiedPayload } = await jose.jwtVerify(
+      token,
+      new TextEncoder().encode(c.env.JWT_SECRET)
+    );
+    payload = verifiedPayload;
+    
+    if (payload.type !== 'export') throw new Error('Invalid token type');
+  } catch (e) {
+    console.error('Download token verification failed:', e.message);
     return c.html('<h2>Download link expired or invalid. Please try again from Settings.</h2>', 401);
   }
 
-  // One-time use
-  downloadTokens.delete(token);
-
-  const { uid, format } = entry;
+  const { uid, format } = payload;
   const db = c.env.DB;
 
   try {
