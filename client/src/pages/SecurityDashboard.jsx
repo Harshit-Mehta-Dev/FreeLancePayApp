@@ -344,15 +344,11 @@ export default function SecurityDashboard() {
 
       <div className="card main-dashboard-card animate-in-up" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)', animationDelay: '0.4s' }}>
         <div className="tab-header" style={{ padding: '0 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', gap: 32, background: 'rgba(255,255,255,0.02)', overflowX: 'auto' }}>
-          {['logs', 'users', 'feedback', 'messaging', 'explorer'].map(t => (
-            <button 
-              key={t}
-              onClick={() => setActiveTab(t)}
-              className={`tab-btn ${activeTab === t ? 'active' : ''}`}
-            >
-              {t === 'logs' ? 'Security Audit' : t === 'users' ? 'User Management' : t === 'feedback' ? 'User Feedback' : t === 'messaging' ? 'Direct Messaging' : 'Dev & System Tools'}
-            </button>
-          ))}
+          <button onClick={() => setActiveTab('logs')} className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`}>SECURITY AUDIT</button>
+          <button onClick={() => setActiveTab('users')} className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}>USER MANAGEMENT</button>
+          <button onClick={() => setActiveTab('feedback')} className={`tab-btn ${activeTab === 'feedback' ? 'active' : ''}`}>USER FEEDBACK</button>
+          <button onClick={() => setActiveTab('messaging')} className={`tab-btn ${activeTab === 'messaging' ? 'active' : ''}`} style={{ color: 'var(--primary-light)', fontWeight: 800 }}>DIRECT MESSAGING</button>
+          <button onClick={() => setActiveTab('explorer')} className={`tab-btn ${activeTab === 'explorer' ? 'active' : ''}`}>DEV & SYSTEM TOOLS</button>
         </div>
 
         <div className="tab-content" style={{ minHeight: '500px', transition: 'all 0.3s ease' }}>
