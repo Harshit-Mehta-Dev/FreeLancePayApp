@@ -118,6 +118,13 @@ const initDb = async () => {
             table.text('note');
             table.timestamp('created_at').defaultTo(db.fn.now());
         });
+    } else {
+        const hasNote = await db.schema.hasColumn('payments', 'note');
+        if (!hasNote) {
+            await db.schema.table('payments', table => {
+                table.text('note');
+            });
+        }
     }
 
     const hasIncome = await db.schema.hasTable('income');
@@ -202,6 +209,20 @@ const initDb = async () => {
             table.integer('bug_report_id').unsigned().references('id').inTable('bug_reports').onDelete('CASCADE');
             table.integer('sender_id').unsigned().references('id').inTable('users').onDelete('CASCADE');
             table.text('message').notNullable();
+            table.timestamp('created_at').defaultTo(db.fn.now());
+        });
+    }
+
+    const hasNotifications = await db.schema.hasTable('notifications');
+    if (!hasNotifications) {
+        await db.schema.createTable('notifications', table => {
+            table.increments('id').primary();
+            table.integer('user_id').unsigned().references('id').inTable('users').onDelete('CASCADE');
+            table.string('type').notNullable();
+            table.string('title').notNullable();
+            table.text('message').notNullable();
+            table.string('link');
+            table.integer('is_read').defaultTo(0);
             table.timestamp('created_at').defaultTo(db.fn.now());
         });
     }

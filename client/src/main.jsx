@@ -4,7 +4,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
-import { ToastProvider } from './context/ToastContext.jsx'
+import { NotificationProvider } from './context/ToastContext.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { GOOGLE_CLIENT_ID } from './api/config'
 
@@ -13,9 +13,9 @@ createRoot(document.getElementById('root')).render(
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <AuthProvider>
         <ThemeProvider>
-          <ToastProvider>
+          <NotificationProvider>
             <App />
-          </ToastProvider>
+          </NotificationProvider>
         </ThemeProvider>
       </AuthProvider>
     </GoogleOAuthProvider>

@@ -13,6 +13,7 @@ import SecurityDashboard from './pages/SecurityDashboard';
 import Legal from './pages/Legal';
 import Feedback from './pages/Feedback';
 import Bugs from './pages/Bugs';
+import VirtualInbox from './pages/VirtualInbox';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import axios from 'axios';
@@ -217,19 +218,43 @@ function Sidebar({ page, setPage, user, logout, open, setOpen, onLogin, onRegist
         )}
 
         {user ? (
-          <div style={{ padding: '12px', marginTop: 8, background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, flexShrink: 0, overflow: 'hidden' }}>
-              {user.avatar?.startsWith('data:image') || user.avatar?.startsWith('http') ? (
-                <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" />
-              ) : (
-                user.avatar || user.name?.[0]?.toUpperCase()
-              )}
+          <div style={{ padding: '14px', marginTop: 8, background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, flexShrink: 0, overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)' }}>
+                {user.avatar?.startsWith('data:image') || user.avatar?.startsWith('http') ? (
+                  <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" />
+                ) : (
+                  user.avatar || user.name?.[0]?.toUpperCase()
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fff' }}>{user.name}</div>
+                  {user.email === 'harshitmehta1012@gmail.com' && (
+                    <span style={{ fontSize: 8, padding: '1px 5px', background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)', color: 'white', borderRadius: 4, fontWeight: 900, flexShrink: 0, letterSpacing: '0.5px' }}>SENIOR ADMIN</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
+                  {user.email === 'harshitmehta1012@gmail.com' ? 'Senior Administrator / Developer' : user.role === 'admin' ? 'Administrator' : 'Freelancer Account'}
+                </div>
+              </div>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
-            </div>
-            <button onClick={logout} title="Logout" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--text-muted)', flexShrink: 0, padding: 4 }}>🚪</button>
+            
+            <button 
+              onClick={() => {
+                if (window.confirm("🔴 SECURE LOGOUT\n\nAre you sure you want to terminate your session? You will need to re-authenticate to access your financial dashboard.")) {
+                  logout();
+                }
+              }} 
+              className="btn-logout-cyber"
+              style={{ width: '100%', padding: '10px' }}
+              title="Secure Logout"
+            >
+              <div className="logout-content">
+                <span style={{ fontSize: 14 }}>🚪</span>
+                <span className="logout-label">SECURE LOGOUT</span>
+              </div>
+            </button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8, padding: '0 4px' }}>
@@ -340,9 +365,10 @@ const MaintenanceOverlay = () => {
 };
 
 export default function App() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, isBanned, logout } = useAuth();
   const { theme, colorThemeId } = useTheme();
   const [page, setPage] = useState('dashboard');
+  const [billFilter, setBillFilter] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authMode, setAuthMode] = useState(null); // null | 'login' | 'register'
   const [showWelcome, setShowWelcome] = useState(false);
@@ -350,6 +376,19 @@ export default function App() {
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [serverDown, setServerDown] = useState(false);
   const lastScrollY = useRef(0);
+
+  // Force reset to dashboard on every fresh load/refresh
+  useEffect(() => {
+    const path = window.location.pathname.replace('/', '');
+    // Only allow special routes to override if explicitly in URL, 
+    // but user requested to ALWAYS open dashboard, so we force it.
+    setPage('dashboard');
+    
+    // Clean up URL to keep it at root
+    if (window.location.pathname !== '/') {
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -377,12 +416,20 @@ export default function App() {
     // Heartbeat check every 10s
     const heartbeat = setInterval(async () => {
       try {
-        await axios.get(`${API}/auth/me`);
+        const res = await axios.get(`${API}/auth/me`);
+        if (res.data.is_banned) {
+          window.location.reload(); // Force trigger ban overlay
+        }
         setServerDown(false);
       } catch (e) {
-        if (!e.response) setServerDown(true);
+        if (!e.response) {
+          setServerDown(true);
+        } else if (e.response.status === 403) {
+          // IMMEDIATE BAN ENFORCEMENT
+          window.location.reload(); 
+        }
       }
-    }, 3000);
+    }, 5000);
 
     return () => {
       axios.interceptors.response.eject(interceptor);
@@ -555,6 +602,7 @@ export default function App() {
         onLogin={() => setAuthMode('login')}
         onRegister={() => setAuthMode('register')}
         setPage={setPage}
+        setBillFilter={setBillFilter}
         showWelcome={showWelcome}
         onWelcomeClose={() => setShowWelcome(false)}
       />;
@@ -566,15 +614,29 @@ export default function App() {
         onRegister={() => setAuthMode('register')}
       />;
     }
-    const PAGES = { bills: Bills, income: Income, cashflow: Cashflow, payments: Payments, calendar: Calendar, settings: Settings, legal: Legal, feedback: Feedback, security: SecurityDashboard, bugs: Bugs };
+    const PAGES = { 
+      bills: () => <Bills setPage={setPage} initialFilter={billFilter} />, 
+      income: Income, 
+      cashflow: Cashflow, 
+      payments: Payments, 
+      calendar: Calendar, 
+      settings: Settings, 
+      legal: Legal, 
+      feedback: Feedback, 
+      security: SecurityDashboard, 
+      bugs: Bugs, 
+      'verification-help': VirtualInbox 
+    };
     const Comp = PAGES[page];
     
     // Admin Guard for pages
     if (NAV.find(n => n.id === page)?.adminOnly && user?.role !== 'admin') {
-      return <Dashboard onLogin={() => setAuthMode('login')} onRegister={() => setAuthMode('register')} setPage={setPage} />;
+      return <Dashboard onLogin={() => setAuthMode('login')} onRegister={() => setAuthMode('register')} setPage={setPage} setBillFilter={setBillFilter} />;
     }
     
-    return Comp ? <Comp setPage={setPage} /> : <Dashboard onLogin={() => setAuthMode('login')} onRegister={() => setAuthMode('register')} setPage={setPage} />;
+    if (page === 'bills') return <Bills setPage={setPage} initialFilter={billFilter} />;
+    
+    return Comp ? (typeof Comp === 'function' && Comp.prototype?.render ? <Comp setPage={setPage} /> : (typeof Comp === 'function' ? React.createElement(Comp, { setPage }) : <Comp setPage={setPage} />)) : <Dashboard onLogin={() => setAuthMode('login')} onRegister={() => setAuthMode('register')} setPage={setPage} setBillFilter={setBillFilter} />;
   };
 
   const isCyber = colorThemeId === 'cyber';
@@ -615,11 +677,126 @@ export default function App() {
         <MaintenanceOverlay />
       )}
 
+      {isBanned && (
+        <BanOverlay />
+      )}
+
       <style>{`
         @media (max-width: 900px) {
           .mobile-header { display: flex !important; }
         }
+
+        .btn-logout-cyber {
+          background: rgba(239, 68, 68, 0.08);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          border-radius: 12px;
+          cursor: pointer;
+          padding: 12px;
+          transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 10px;
+        }
+
+        .btn-logout-cyber:hover {
+          background: rgba(239, 68, 68, 0.2);
+          border-color: #ef4444;
+          box-shadow: 0 0 25px rgba(239, 68, 68, 0.4), inset 0 0 10px rgba(239, 68, 68, 0.1);
+          transform: translateY(-2px);
+        }
+
+        .btn-logout-cyber:hover .logout-label {
+          color: #fff;
+          text-shadow: 0 0 8px #ef4444;
+        }
+
+        .btn-logout-cyber::before {
+          content: '';
+          position: absolute;
+          top: 0; left: -100%;
+          width: 100%; height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.2), transparent);
+          transition: 0.5s;
+        }
+
+        .btn-logout-cyber:hover::before {
+          left: 100%;
+          transition: 0.5s;
+        }
+
+        .logout-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .logout-label {
+          font-size: 11px;
+          font-weight: 900;
+          color: #fca5a5;
+          letter-spacing: 2px;
+          transition: all 0.3s ease;
+        }
+
       `}</style>
     </div>
   );
 }
+
+const BanOverlay = () => (
+  <div style={{
+    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+    background: '#000', zIndex: 9999999, display: 'flex',
+    flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    textAlign: 'center', color: '#ff4444', overflow: 'hidden'
+  }}>
+    <div className="crack-container">
+      <div className="crack"></div>
+      <div className="crack"></div>
+      <div className="crack"></div>
+      <div className="crack"></div>
+      <div className="crack"></div>
+    </div>
+    <div style={{ position: 'relative', zIndex: 10, padding: 20 }}>
+      <div style={{ fontSize: '5rem', marginBottom: 20, animation: 'shake 0.5s infinite' }}>🚫</div>
+      <h1 style={{ fontSize: 'clamp(2rem, 8vw, 4rem)', fontWeight: 900, marginBottom: 20, letterSpacing: 5, textShadow: '0 0 20px rgba(255,0,0,0.5)' }}>ACCESS REVOKED</h1>
+      <p style={{ fontSize: 'clamp(1rem, 4vw, 1.5rem)', maxWidth: 600, margin: '0 auto', lineHeight: 1.6, color: '#fff', opacity: 0.8 }}>
+        This account has been <b>permanently blacklisted</b> for severe security violations. 
+        Your digital footprint has been logged and all access nodes are terminated.
+      </p>
+      <div style={{ marginTop: 40, padding: '16px 32px', border: '2px solid #ff4444', borderRadius: 12, display: 'inline-block', background: 'rgba(255,0,0,0.1)' }}>
+        <span style={{ fontSize: '1.2rem', fontWeight: 900, letterSpacing: 3 }}>STATUS: PERMANENT_TERMINATION</span>
+      </div>
+      <p style={{ marginTop: 30, fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Attempting to bypass this restriction will trigger further automated responses.</p>
+    </div>
+    <style>{`
+      @keyframes crack-expand {
+        0% { transform: scale(1); opacity: 0; }
+        10% { opacity: 1; }
+        100% { transform: scale(5) translate(var(--tx), var(--ty)); opacity: 0; }
+      }
+      @keyframes shake {
+        0%, 100% { transform: translate(0,0); }
+        25% { transform: translate(-5px, 5px); }
+        50% { transform: translate(5px, -5px); }
+        75% { transform: translate(-5px, -5px); }
+      }
+      .crack-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+      .crack { 
+        position: absolute; top: 50%; left: 50%; width: 1px; height: 200%; 
+        background: rgba(255,255,255,0.8); transform-origin: center;
+        animation: crack-expand 0.4s ease-out forwards;
+      }
+      .crack:nth-child(1) { --tx: 20%; --ty: -30%; transform: translate(-50%, -50%) rotate(15deg); animation-delay: 0s; }
+      .crack:nth-child(2) { --tx: -40%; --ty: 10%; transform: translate(-50%, -50%) rotate(110deg); animation-delay: 0.1s; }
+      .crack:nth-child(3) { --tx: 10%; --ty: 50%; transform: translate(-50%, -50%) rotate(220deg); animation-delay: 0.2s; }
+      .crack:nth-child(4) { --tx: -50%; --ty: -20%; transform: translate(-50%, -50%) rotate(310deg); animation-delay: 0.3s; }
+      .crack:nth-child(5) { --tx: 30%; --ty: 40%; transform: translate(-50%, -50%) rotate(45deg); animation-delay: 0.4s; }
+    `}</style>
+  </div>
+);

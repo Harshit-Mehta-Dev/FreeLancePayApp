@@ -1,5 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/ToastContext';
+import { Bell } from 'lucide-react';
+
+const NotificationBell = () => {
+  const { unreadCount, setShowCenter } = useNotification();
+  return (
+    <div 
+      className="notif-bell-trigger" 
+      onClick={() => setShowCenter(true)}
+      style={{ position: 'relative', cursor: 'pointer', padding: 8, display: 'flex' }}
+    >
+      <Bell size={20} color={unreadCount > 0 ? 'var(--primary)' : 'var(--text-muted)'} />
+      {unreadCount > 0 && (
+        <span style={{
+          position: 'absolute', top: 2, right: 2, background: 'var(--accent-purple)',
+          color: 'white', fontSize: 9, fontWeight: 900, minWidth: 16, height: 16,
+          borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 0 10px var(--accent-purple)',
+          border: '2px solid #05050a'
+        }}>
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+      )}
+    </div>
+  );
+};
 
 export default function Header({ pageLabel, isHidden }) {
   const { user } = useAuth();
@@ -122,6 +148,26 @@ export default function Header({ pageLabel, isHidden }) {
             {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}
           </div>
         </div>
+
+        <NotificationBell />
+
+        {user && (
+          <div style={{ 
+            width: 38, height: 38, borderRadius: '50%', 
+            background: 'linear-gradient(135deg, var(--primary), #06b6d4)', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+            fontSize: 16, fontWeight: 700, flexShrink: 0, overflow: 'hidden',
+            border: '2px solid rgba(var(--primary-rgb), 0.3)',
+            boxShadow: '0 0 15px rgba(var(--primary-rgb), 0.2)',
+            cursor: 'pointer'
+          }}>
+            {user.avatar?.startsWith('data:image') || user.avatar?.startsWith('http') ? (
+              <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" />
+            ) : (
+              user.avatar || user.name?.[0]?.toUpperCase()
+            )}
+          </div>
+        )}
 
         <div className="btn-cyber-status" style={{ 
           display: 'flex', alignItems: 'center', gap: 10, 

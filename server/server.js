@@ -1601,6 +1601,71 @@ app.patch('/api/bugs/:id/status', auth, isAdmin, async (req, res) => {
   }
 });
 
+// ===================== NOTIFICATIONS SYSTEM =====================
+
+app.get('/api/notifications', auth, async (req, res) => {
+  try {
+    const notifications = await db('notifications')
+      .where({ user_id: req.user.id })
+      .orderBy('created_at', 'desc')
+      .limit(50);
+    res.json(notifications);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+app.patch('/api/notifications/:id/read', auth, async (req, res) => {
+  try {
+    await db('notifications')
+      .where({ id: req.params.id, user_id: req.user.id })
+      .update({ is_read: 1 });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to mark notification as read' });
+  }
+});
+
+app.patch('/api/notifications/read-all', auth, async (req, res) => {
+  try {
+    await db('notifications')
+      .where({ user_id: req.user.id })
+      .update({ is_read: 1 });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to mark all as read' });
+  }
+});
+
+// Admin send notification
+app.post('/api/admin/notifications', auth, isAdmin, async (req, res) => {
+  const { user_id, type, title, message, link } = req.body;
+  if (!user_id || !title || !message) {
+    return res.status(400).json({ error: 'user_id, title, and message are required' });
+  }
+
+  try {
+    // Verify target user exists
+    const user = await db('users').where({ id: user_id }).first();
+    if (!user) return res.status(404).json({ error: 'Target user not found' });
+
+    await db('notifications').insert({
+      user_id,
+      type: type || 'admin_message',
+      title,
+      message,
+      link: link || null,
+      is_read: 0
+    });
+
+    await logSecurityEvent('ADMIN_NOTIFICATION_SENT', req.ip, `Admin ${req.user.email} sent a message to user ${user.email}`);
+    res.json({ success: true, message: 'Notification sent successfully' });
+  } catch (err) {
+    console.error('Send notification error:', err);
+    res.status(500).json({ error: 'Failed to send notification' });
+  }
+});
+
 app.post('/api/admin/system-restart', auth, isAdmin, async (req, res) => {
   await logSecurityEvent('ADMIN_ACTION', req.ip, `System restart requested by ${req.user.email}`);
   res.json({ success: true, message: 'Restart command received. Process will recycle shortly.' });

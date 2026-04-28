@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API } from '../api/config';
+import { API, apiHeaders } from '../api/config';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import Skeleton from '../components/Skeleton';
 const StatCard = ({ title, value, icon, color, subtext, onClick }) => (
   <div 
@@ -28,6 +29,7 @@ const StatCard = ({ title, value, icon, color, subtext, onClick }) => (
 
 export default function SecurityDashboard() {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [stats, setStats] = useState(null);
   const [logs, setLogs] = useState([]);
   const [feedback, setFeedback] = useState([]);
@@ -42,6 +44,11 @@ export default function SecurityDashboard() {
   const [maintenance, setMaintenance] = useState(false);
   const [regEnabled, setRegEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
+  const [selectedUserForMessage, setSelectedUserForMessage] = useState(null);
+  const [msgTitle, setMsgTitle] = useState('');
+  const [msgBody, setMsgBody] = useState('');
+  const [sendingMsg, setSendingMsg] = useState(false);
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -134,19 +141,66 @@ export default function SecurityDashboard() {
   };
 
   const updateUserRole = async (userId, newRole) => {
-    if (!window.confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
+    const verb = newRole === 'admin' ? 'PROMOTE' : 'DEMOTE';
+    if (!window.confirm(`⚠️ ${verb} USER: Are you sure you want to change this user's clearance level to ${newRole.toUpperCase()}?`)) return;
     try {
-      await axios.post(`${API}/admin/users/${userId}/role`, { role: newRole });
+      await axios.post(`${API}/admin/users/${userId}/role`, { role: newRole }, { headers: apiHeaders() });
+      addToast(`Access clearance updated: User ${newRole === 'admin' ? 'Promoted' : 'Demoted'}`, 'success');
       fetchData(true);
-    } catch (err) { console.error('Role update failed'); }
+    } catch (err) { 
+      addToast(err.response?.data?.error || 'Authorization update failed', 'error');
+    }
   };
 
   const deleteUser = async (userId, userEmail) => {
     if (!window.confirm(`⚠️ CRITICAL ACTION: Are you sure you want to COMPLETELY DELETE user ${userEmail} and all their data? This cannot be undone.`)) return;
     try {
-      await axios.delete(`${API}/admin/users/${userId}`);
+      await axios.delete(`${API}/admin/users/${userId}`, { headers: apiHeaders() });
+      addToast('User identity purged from system', 'success');
       fetchData(true);
-    } catch (err) { alert(err.response?.data?.error || 'Delete failed'); }
+    } catch (err) { addToast(err.response?.data?.error || 'Purge failed', 'error'); }
+  };
+
+  const banUser = async (userId, userEmail) => {
+    if (userEmail === 'harshitmehta1012@gmail.com') return addToast('Cannot ban root admin', 'error');
+    if (!window.confirm(`⚠️ PERMANENT BAN: Are you sure you want to ban ${userEmail}? This will permanently revoke all access and wipe their verification status.`)) return;
+    
+    try {
+      await axios.post(`${API}/admin/ban-user`, { userId }, { headers: apiHeaders() });
+      addToast(`Target ${userEmail} permanently blacklisted`, 'success');
+      // Immediately remove from list locally
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      fetchData(true);
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Failed to ban user', 'error');
+    }
+  };
+
+  const sendAdminMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedUserForMessage || !msgTitle || !msgBody) {
+      return addToast('Please fill in all required fields', 'error');
+    }
+
+    setSendingMsg(true);
+    try {
+      await axios.post(`${API}/admin/notifications`, {
+        user_id: selectedUserForMessage.id,
+        title: msgTitle,
+        message: msgBody,
+        type: 'admin_message'
+      });
+      addToast(`Message transmitted to ${selectedUserForMessage.name}`, 'success');
+      setMsgTitle('');
+      setMsgBody('');
+      setSelectedUserForMessage(null);
+      setActiveTab('users');
+      fetchData(true);
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Transmission failed', 'error');
+    } finally {
+      setSendingMsg(false);
+    }
   };
 
   if (loading && !stats) return (
@@ -290,13 +344,13 @@ export default function SecurityDashboard() {
 
       <div className="card main-dashboard-card animate-in-up" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)', animationDelay: '0.4s' }}>
         <div className="tab-header" style={{ padding: '0 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', gap: 32, background: 'rgba(255,255,255,0.02)', overflowX: 'auto' }}>
-          {['logs', 'users', 'feedback', 'explorer'].map(t => (
+          {['logs', 'users', 'feedback', 'messaging', 'explorer'].map(t => (
             <button 
               key={t}
               onClick={() => setActiveTab(t)}
               className={`tab-btn ${activeTab === t ? 'active' : ''}`}
             >
-              {t === 'logs' ? 'Security Audit' : t === 'users' ? 'User Management' : t === 'feedback' ? 'User Feedback' : 'Dev & System Tools'}
+              {t === 'logs' ? 'Security Audit' : t === 'users' ? 'User Management' : t === 'feedback' ? 'User Feedback' : t === 'messaging' ? 'Direct Messaging' : 'Dev & System Tools'}
             </button>
           ))}
         </div>
@@ -347,34 +401,144 @@ export default function SecurityDashboard() {
                         </tr>
                     </thead>
                     <tbody>
-                        {users.map((u, i) => (
+                        {users.filter(u => u.is_banned !== 1).map((u, i) => (
                         <tr key={u.id} className="row-hover" style={{ borderBottom: '1px solid var(--glass-border)', animation: `slideInLeft 0.3s ease forwards ${i * 0.05}s`, opacity: 0 }}>
                             <td style={{ padding: '18px 24px', fontWeight: 700 }}>{u.name}</td>
                             <td style={{ padding: '18px 24px', color: 'var(--text-secondary)' }}>{u.email}</td>
                             <td style={{ padding: '18px 24px' }}>
-                            <span className={`badge ${u.role === 'admin' ? 'warning' : 'ghost'}`}>
-                                {u.role.toUpperCase()}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span className={`badge ${u.email === 'harshitmehta1012@gmail.com' ? 'senior-admin' : u.role === 'admin' ? 'warning' : 'ghost'}`}>
+                                  {u.email === 'harshitmehta1012@gmail.com' ? 'SENIOR ADMIN' : u.role.toUpperCase()}
+                              </span>
+                              {u.is_banned === 1 && (
+                                <span className="badge danger" style={{ animation: 'blink 1s infinite' }}>BANNED</span>
+                              )}
+                            </div>
                             </td>
                             <td style={{ padding: '18px 24px', color: 'var(--text-muted)' }}>{new Date(u.created_at).toLocaleDateString()}</td>
                             <td style={{ padding: '18px 24px', display: 'flex', gap: 12 }}>
-                            <button 
-                                onClick={() => updateUserRole(u.id, u.role === 'admin' ? 'user' : 'admin')}
-                                className="action-btn"
-                            >
-                                {u.role === 'admin' ? 'DEMOTE' : 'PROMOTE'}
-                            </button>
-                            <button 
-                                onClick={() => deleteUser(u.id, u.email)}
-                                className="action-btn danger"
-                            >
-                                DELETE
-                            </button>
-                            </td>
+                             <button 
+                                 onClick={() => {
+                                   setSelectedUserForMessage(u);
+                                   setActiveTab('messaging');
+                                 }}
+                                 className="action-btn"
+                                 style={{ background: 'rgba(139, 92, 246, 0.1)', color: 'var(--primary-light)', borderColor: 'rgba(139, 92, 246, 0.3)' }}
+                             >
+                                 MESSAGE
+                             </button>
+                             <button 
+                                 onClick={() => updateUserRole(u.id, u.role === 'admin' ? 'user' : 'admin')}
+                                 className="action-btn"
+                                 disabled={u.is_banned === 1}
+                                 style={{ opacity: u.is_banned === 1 ? 0.3 : 1 }}
+                             >
+                                 {u.role === 'admin' ? 'DEMOTE' : 'PROMOTE'}
+                             </button>
+                             <button 
+                                 onClick={() => banUser(u.id, u.email)}
+                                 className={`action-btn ${u.is_banned === 1 ? 'ghost' : 'danger'}`}
+                                 disabled={u.is_banned === 1}
+                                 style={{ 
+                                   opacity: u.is_banned === 1 ? 0.5 : 1,
+                                   background: u.is_banned === 1 ? 'rgba(239, 68, 68, 0.1)' : undefined 
+                                 }}
+                             >
+                                 {u.is_banned === 1 ? 'LOCKED' : 'BAN'}
+                             </button>
+                             </td>
                         </tr>
                         ))}
                     </tbody>
                     </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'messaging' && (
+              <div className="tab-pane fade-in" style={{ padding: '40px', maxWidth: 800, margin: '0 auto' }}>
+                <div className="glass-card" style={{ padding: 40, border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.01)' }}>
+                  <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>📨</div>
+                    <h2 style={{ fontSize: 24, fontWeight: 800, color: '#fff', marginBottom: 8 }}>Secure Communications Node</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Send an encrypted, one-way administrative message to any user.</p>
+                  </div>
+
+                  <form onSubmit={sendAdminMessage} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    <div className="form-group">
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Target Recipient</label>
+                      <select 
+                        className="cyber-input"
+                        value={selectedUserForMessage?.id || ''}
+                        onChange={(e) => {
+                          const u = users.find(u => u.id === parseInt(e.target.value));
+                          setSelectedUserForMessage(u);
+                        }}
+                        style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: 12, color: '#fff' }}
+                      >
+                        <option value="">Select a user...</option>
+                        {users.map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Message Title / Subject</label>
+                      <input 
+                        type="text"
+                        className="cyber-input"
+                        placeholder="e.g. Account Security Update"
+                        value={msgTitle}
+                        onChange={(e) => setMsgTitle(e.target.value)}
+                        style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: 12, color: '#fff' }}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Message Payload</label>
+                      <textarea 
+                        rows="6"
+                        className="cyber-input"
+                        placeholder="Enter the message content here..."
+                        value={msgBody}
+                        onChange={(e) => setMsgBody(e.target.value)}
+                        style={{ width: '100%', padding: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: 12, color: '#fff', resize: 'vertical' }}
+                      ></textarea>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
+                      <button 
+                        type="button" 
+                        className="btn btn-ghost" 
+                        style={{ flex: 1 }}
+                        onClick={() => {
+                          setMsgTitle('');
+                          setMsgBody('');
+                          setSelectedUserForMessage(null);
+                          setActiveTab('users');
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="btn btn-primary" 
+                        style={{ flex: 2, gap: 10 }}
+                        disabled={sendingMsg}
+                      >
+                        {sendingMsg ? 'TRANSMITTING...' : 'SEND SECURE MESSAGE'}
+                        <span style={{ fontSize: 18 }}>🚀</span>
+                      </button>
+                    </div>
+                  </form>
+
+                  <div style={{ marginTop: 32, padding: 20, background: 'rgba(245, 158, 11, 0.05)', borderRadius: 12, border: '1px solid rgba(245, 158, 11, 0.2)', display: 'flex', gap: 16, alignItems: 'center' }}>
+                    <div style={{ fontSize: 24 }}>⚠️</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      <strong>Protocol Note:</strong> Messages are one-way. Users will receive a notification and can read the full message, but cannot reply through this channel. All administrative communications are logged for audit purposes.
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -387,12 +551,17 @@ export default function SecurityDashboard() {
                         <p>No user feedback received yet.</p>
                     </div>
                 ) : feedback.map((item, i) => (
-                  <div key={item.id} className="glass-card feedback-card" style={{ padding: 28, animation: `scaleIn 0.4s ease forwards ${i * 0.1}s`, opacity: 0 }}>
+                  <div 
+                    key={item.id} 
+                    className="glass-card feedback-card interactive" 
+                    onClick={() => setSelectedFeedback(item)}
+                    style={{ padding: 28, animation: `scaleIn 0.4s ease forwards ${i * 0.1}s`, opacity: 0, cursor: 'pointer' }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                       <h3 style={{ fontSize: 16, fontWeight: 800 }}>{item.subject}</h3>
                       <div className="rating-stars">{'⭐'.repeat(item.rating)}</div>
                     </div>
-                    <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>{item.message}</p>
+                    <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.message}</p>
                     <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600 }}>{item.email}</span>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(item.created_at).toLocaleDateString()}</span>
@@ -401,6 +570,56 @@ export default function SecurityDashboard() {
                 ))}
               </div>
             )}
+
+      {/* Feedback Modal Reader */}
+      {selectedFeedback && (
+        <div className="modal-overlay" onClick={() => setSelectedFeedback(null)} style={{ zIndex: 10000 }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600, animation: 'modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 24 }}>💬</span>
+                <h2 className="modal-title">Feedback Details</h2>
+              </div>
+              <button className="btn btn-ghost btn-icon" onClick={() => setSelectedFeedback(null)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ padding: '30px 40px' }}>
+              <div style={{ marginBottom: 24 }}>
+                <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: '#fff' }}>{selectedFeedback.subject}</h3>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i} style={{ fontSize: 18, filter: i < selectedFeedback.rating ? 'none' : 'grayscale(1)', opacity: i < selectedFeedback.rating ? 1 : 0.3 }}>⭐</span>
+                  ))}
+                </div>
+              </div>
+              
+              <div style={{ 
+                lineHeight: 1.8, fontSize: 15, color: 'var(--text-secondary)', 
+                background: 'rgba(255,255,255,0.02)', padding: 24, borderRadius: 16, border: '1px solid var(--glass-border)',
+                whiteSpace: 'pre-wrap', maxHeight: 300, overflowY: 'auto'
+              }}>
+                {selectedFeedback.message}
+              </div>
+              
+              <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div style={{ background: 'var(--glass)', padding: 16, borderRadius: 12, border: '1px solid var(--glass-border)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, letterSpacing: 1 }}>SENDER</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)', wordBreak: 'break-all' }}>{selectedFeedback.email}</div>
+                </div>
+                <div style={{ background: 'var(--glass)', padding: 16, borderRadius: 12, border: '1px solid var(--glass-border)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, letterSpacing: 1 }}>TIMESTAMP</div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{new Date(selectedFeedback.created_at).toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+              <button className="btn btn-ghost" onClick={() => setSelectedFeedback(null)}>Close Reader</button>
+              <button className="btn btn-primary" onClick={() => {
+                window.location.href = `mailto:${selectedFeedback.email}?subject=Re: ${selectedFeedback.subject}`;
+              }}>Reply via Email</button>
+            </div>
+          </div>
+        </div>
+      )}
 
             {activeTab === 'explorer' && (
               <div className="tab-pane fade-in" style={{ padding: 40 }}>
@@ -574,6 +793,13 @@ export default function SecurityDashboard() {
         .badge.primary { background: rgba(139, 92, 246, 0.15); color: var(--primary-light); }
         .badge.danger { background: rgba(239, 68, 68, 0.15); color: #f87171; }
         .badge.warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .badge.senior-admin { 
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(6, 182, 212, 0.3)); 
+            color: #fff; 
+            border: 1px solid rgba(139, 92, 246, 0.5);
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+        }
         .badge.ghost { background: rgba(255, 255, 255, 0.05); color: var(--text-muted); }
 
         /* --- Rows --- */
