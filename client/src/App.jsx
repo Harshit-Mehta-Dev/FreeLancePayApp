@@ -12,6 +12,7 @@ import Calendar from './pages/Calendar';
 import SecurityDashboard from './pages/SecurityDashboard';
 import Legal from './pages/Legal';
 import Feedback from './pages/Feedback';
+import Bugs from './pages/Bugs';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import axios from 'axios';
@@ -20,7 +21,7 @@ import { notificationEngine } from './utils/NotificationManager';
 import CookieConsent from './components/CookieConsent';
 
 // Pages that require authentication
-const AUTH_REQUIRED = ['bills', 'income', 'cashflow', 'payments', 'calendar', 'settings', 'feedback'];
+const AUTH_REQUIRED = ['bills', 'income', 'cashflow', 'payments', 'calendar', 'settings', 'feedback', 'bugs'];
 
 // ─── Audio Engine ───
 const playClickSound = () => {
@@ -52,6 +53,7 @@ const NAV = [
   { id: 'cashflow',  label: 'Cashflow',  icon: '📊', public: false },
   { id: 'payments',  label: 'Payment History', icon: '🧾', public: false },
   { id: 'feedback',  label: 'Feedback', icon: '💬', public: false },
+  { id: 'bugs',      label: 'Bug Reports', icon: '🐛', public: false },
   { id: 'security',  label: 'Security', icon: '🛡️', public: false, adminOnly: true },
 ];
 
@@ -564,7 +566,7 @@ export default function App() {
         onRegister={() => setAuthMode('register')}
       />;
     }
-    const PAGES = { bills: Bills, income: Income, cashflow: Cashflow, payments: Payments, calendar: Calendar, settings: Settings, legal: Legal, feedback: Feedback, security: SecurityDashboard };
+    const PAGES = { bills: Bills, income: Income, cashflow: Cashflow, payments: Payments, calendar: Calendar, settings: Settings, legal: Legal, feedback: Feedback, security: SecurityDashboard, bugs: Bugs };
     const Comp = PAGES[page];
     
     // Admin Guard for pages

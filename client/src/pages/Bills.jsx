@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatCurrency, formatDate, daysUntil, getCategoryMeta, CATEGORIES, RECURRENCES } from '../utils/helpers';
 import { notificationEngine } from '../utils/NotificationManager';
-
+import Skeleton from '../components/Skeleton';
 const STATUS_FILTERS = ['all', 'upcoming', 'overdue', 'paid'];
 
 const BillModal = ({ bill, onClose, onSave }) => {
@@ -227,7 +227,36 @@ export default function Bills() {
 
       {/* Bills Grid */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>⏳ Loading...</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="glass-card" style={{ padding: 20, borderLeft: '3px solid transparent' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <Skeleton width="40px" height="40px" style={{ borderRadius: 10, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton width="60%" height="20px" style={{ marginBottom: 4 }} />
+                    <Skeleton width="40%" height="16px" />
+                  </div>
+                </div>
+                <Skeleton width="60px" height="24px" style={{ borderRadius: 99, flexShrink: 0 }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+                <Skeleton width="100px" height="30px" />
+                <Skeleton width="80px" height="18px" />
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                <Skeleton width="100px" height="22px" style={{ borderRadius: 99 }} />
+                <Skeleton width="80px" height="22px" style={{ borderRadius: 99 }} />
+              </div>
+              <Skeleton width="100%" height="3px" style={{ marginBottom: 14 }} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Skeleton width="100%" height="36px" style={{ flex: 1 }} />
+                <Skeleton width="40px" height="36px" />
+                <Skeleton width="40px" height="36px" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="empty-state glass-card" style={{ padding: 60 }}>
           <div className="empty-icon">📭</div>

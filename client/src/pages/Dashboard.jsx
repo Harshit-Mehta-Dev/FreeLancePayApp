@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatCurrency, formatDate, daysUntil, getCategoryMeta } from '../utils/helpers';
 import AppInfoModal from '../components/AppInfoModal';
-
+import Skeleton from '../components/Skeleton';
 // ─── Public / Guest Dashboard ─────────────────────────────────────────────────
 const GuestDashboard = ({ onLogin, onRegister }) => {
   const [showInfo, setShowInfo] = useState(false);
@@ -326,10 +326,48 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
   }, []);
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', gap: 12 }}>
-      <div style={{ width: 24, height: 24, border: '3px solid rgba(var(--primary-rgb),0.3)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <span style={{ color: 'var(--text-muted)' }}>Loading dashboard...</span>
-    </div>
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <Skeleton width="300px" height="36px" style={{ marginBottom: 8 }} />
+          <Skeleton width="250px" height="20px" />
+        </div>
+        <Skeleton width="180px" height="36px" style={{ borderRadius: 99 }} />
+      </div>
+
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="glass-card" style={{ flex: 1, minWidth: 180, padding: 22 }}>
+            <Skeleton width="80px" height="16px" style={{ marginBottom: 8 }} />
+            <Skeleton width="120px" height="32px" style={{ marginBottom: 8 }} />
+            <Skeleton width="60px" height="14px" />
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 24 }}>
+        <div className="glass-card" style={{ padding: 24 }}>
+          <Skeleton width="150px" height="24px" style={{ marginBottom: 20 }} />
+          <Skeleton width="100%" height="240px" />
+        </div>
+        <div className="glass-card" style={{ padding: 24 }}>
+          <Skeleton width="120px" height="24px" style={{ marginBottom: 16 }} />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+            <Skeleton width="144px" height="144px" shape="circle" />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[...Array(4)].map((_, i) => (
+               <Skeleton key={i} width="100%" height="16px" />
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      <div className="glass-card" style={{ padding: 24 }}>
+        <Skeleton width="150px" height="24px" style={{ marginBottom: 20 }} />
+        <Skeleton width="100%" height="120px" />
+      </div>
+    </>
   );
 
   if (!data) return (

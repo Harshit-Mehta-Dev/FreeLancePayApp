@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { API, apiHeaders } from '../api/config';
 import { formatCurrency, getCategoryMeta } from '../utils/helpers';
-
+import Skeleton from '../components/Skeleton';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -352,9 +352,14 @@ export default function Calendar() {
 
           {/* Day cells */}
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>
-              <div style={{ width: 28, height: 28, border: '3px solid rgba(var(--primary-rgb),0.3)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
-              Loading calendar...
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+              {[...Array(35)].map((_, i) => (
+                <div key={i} style={{ minHeight: 80, padding: '6px 8px', borderRadius: 10, background: 'rgba(255,255,255,0.02)' }}>
+                  <Skeleton width="22px" height="22px" style={{ borderRadius: '50%', marginBottom: 4 }} />
+                  {i % 3 === 0 && <Skeleton width="100%" height="18px" style={{ borderRadius: 6, marginBottom: 2 }} />}
+                  {i % 5 === 0 && <Skeleton width="100%" height="18px" style={{ borderRadius: 6 }} />}
+                </div>
+              ))}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>

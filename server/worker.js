@@ -196,6 +196,51 @@ app.get('/api/auth/google/callback', async (c) => {
   }
 });
 
+app.post('/api/auth/google/verify', async (c) => {
+  const { token } = await c.req.json();
+  if (!token) return c.json({ error: 'Google Token required' }, 400);
+
+  try {
+    // Verify token with Google's public keys
+    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+    if (!response.ok) throw new Error('Invalid token');
+    const payload = await response.json();
+    
+    if (payload.aud !== c.env.GOOGLE_CLIENT_ID) {
+      throw new Error('Invalid audience');
+    }
+
+    const { email, name, picture } = payload;
+    let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first();
+    const role = isRootAdmin(email) ? 'admin' : 'user';
+    
+    if (!user) {
+      const result = await c.env.DB.prepare(
+        'INSERT INTO users (name, email, password, currency, email_verified, avatar, role) VALUES (?, ?, ?, ?, 1, ?, ?) RETURNING id'
+      ).bind(name, email, await bcrypt.hash(Math.random().toString(36), 10), 'USD', picture, role).first();
+      user = { id: result.id, name, email, role, currency: 'USD' };
+    } else {
+      user.role = role;
+    }
+    
+    const jwtToken = await new jose.SignJWT({ id: user.id, email: user.email, name: user.name, role: user.role })
+      .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('7d').sign(new TextEncoder().encode(c.env.JWT_SECRET));
+
+    setCookie(c, 'fp_token', jwtToken, { 
+      httpOnly: true, 
+      secure: true, 
+      sameSite: 'None', 
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/'
+    });
+    
+    return c.json({ success: true, user });
+  } catch (e) {
+    console.error('Verify error:', e);
+    return c.json({ error: 'Invalid Google Token' }, 401);
+  }
+});
+
 // --- HEALTH CHECK ---
 app.get('/api/health', async (c) => {
   const dbStatus = await c.env.DB.prepare('SELECT 1').first() ? 'UP' : 'DOWN';

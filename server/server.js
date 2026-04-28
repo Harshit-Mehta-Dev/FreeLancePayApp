@@ -23,7 +23,7 @@ const mavin = require('./mavin-ai');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const { OAuth2Client } = require('google-auth-library');
-const gClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const gClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
 
 // ===================== JOI VALIDATION SCHEMAS =====================
 const schemas = {
@@ -1497,6 +1497,107 @@ app.post('/api/admin/purge-logs', auth, isAdmin, async (req, res) => {
     res.json({ success: true, message: 'Security logs purged successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to purge logs' });
+  }
+});
+
+// ===================== BUG REPORTING ENGINE =====================
+
+app.post('/api/bugs', auth, async (req, res) => {
+  try {
+    const { subject, description, image_data } = req.body;
+    if (!subject || !description) return res.status(400).json({ error: 'Subject and description are required' });
+
+    const [bugId] = await db('bug_reports').insert({
+      user_id: req.user.id,
+      subject,
+      description,
+      image_data: image_data || null,
+      status: 'open'
+    });
+
+    await logSecurityEvent('BUG_REPORTED', req.ip, `Bug report created by ${req.user.email}`);
+    res.json({ success: true, id: bugId });
+  } catch (err) {
+    console.error('Bug Creation Error:', err);
+    res.status(500).json({ error: 'Failed to create bug report' });
+  }
+});
+
+app.get('/api/bugs', auth, async (req, res) => {
+  try {
+    let bugs;
+    if (req.user.role === 'admin') {
+      bugs = await db('bug_reports')
+        .join('users', 'bug_reports.user_id', 'users.id')
+        .select('bug_reports.*', 'users.name as user_name', 'users.email as user_email')
+        .orderBy('created_at', 'desc');
+    } else {
+      bugs = await db('bug_reports')
+        .where({ user_id: req.user.id })
+        .orderBy('created_at', 'desc');
+    }
+    res.json(bugs);
+  } catch (err) {
+    console.error('Fetch Bugs Error:', err);
+    res.status(500).json({ error: 'Failed to fetch bugs' });
+  }
+});
+
+app.get('/api/bugs/:id/messages', auth, async (req, res) => {
+  try {
+    const bug = await db('bug_reports').where({ id: req.params.id }).first();
+    if (!bug) return res.status(404).json({ error: 'Bug report not found' });
+    if (req.user.role !== 'admin' && bug.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized access to bug report' });
+    }
+
+    const messages = await db('bug_messages')
+      .where({ bug_report_id: req.params.id })
+      .join('users', 'bug_messages.sender_id', 'users.id')
+      .select('bug_messages.*', 'users.name as sender_name', 'users.role as sender_role')
+      .orderBy('created_at', 'asc');
+    
+    res.json(messages);
+  } catch (err) {
+    console.error('Fetch Bug Messages Error:', err);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+app.post('/api/bugs/:id/messages', auth, async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: 'Message is required' });
+
+    const bug = await db('bug_reports').where({ id: req.params.id }).first();
+    if (!bug) return res.status(404).json({ error: 'Bug report not found' });
+    if (req.user.role !== 'admin' && bug.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized access to bug report' });
+    }
+
+    await db('bug_messages').insert({
+      bug_report_id: req.params.id,
+      sender_id: req.user.id,
+      message
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Send Bug Message Error:', err);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+app.patch('/api/bugs/:id/status', auth, isAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['open', 'resolved'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+
+    await db('bug_reports').where({ id: req.params.id }).update({ status });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Update Bug Status Error:', err);
+    res.status(500).json({ error: 'Failed to update status' });
   }
 });
 

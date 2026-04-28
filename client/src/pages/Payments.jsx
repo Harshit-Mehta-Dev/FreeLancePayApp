@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API, apiHeaders } from '../api/config';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate, getCategoryMeta } from '../utils/helpers';
-
+import Skeleton from '../components/Skeleton';
 export default function Payments() {
   const { user } = useAuth();
   const [payments, setPayments] = useState([]);
@@ -54,7 +54,17 @@ export default function Payments() {
       <div className="glass-card" style={{ padding: 24 }}>
         <h3 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, marginBottom: 16 }}>All Payments</h3>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>⏳ Loading...</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <Skeleton width="30%" height="20px" />
+                <Skeleton width="15%" height="20px" style={{ borderRadius: 99 }} />
+                <Skeleton width="20%" height="20px" />
+                <Skeleton width="20%" height="20px" />
+                <Skeleton width="15%" height="20px" />
+              </div>
+            ))}
+          </div>
         ) : payments.length === 0 ? (
           <div className="empty-state"><div className="empty-icon">🧾</div><p>No payments yet</p></div>
         ) : (

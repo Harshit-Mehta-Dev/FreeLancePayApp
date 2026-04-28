@@ -4,7 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { API, apiHeaders } from '../api/config';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/helpers';
-
+import Skeleton from '../components/Skeleton';
 export default function Cashflow() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
@@ -26,7 +26,34 @@ export default function Cashflow() {
     return () => { isMounted = false; };
   }, [load]);
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>⏳</div>;
+  if (loading) return (
+    <div className="page">
+      <div className="page-header" style={{ marginBottom: 28 }}>
+        <Skeleton width="280px" height="36px" style={{ marginBottom: 8 }} />
+        <Skeleton width="220px" height="20px" />
+      </div>
+
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="glass-card" style={{ flex: 1, minWidth: 200, padding: 22 }}>
+            <Skeleton width="32px" height="32px" style={{ marginBottom: 8 }} />
+            <Skeleton width="140px" height="14px" style={{ marginBottom: 8 }} />
+            <Skeleton width="100px" height="28px" />
+          </div>
+        ))}
+      </div>
+
+      <div className="glass-card" style={{ padding: 28, marginBottom: 24 }}>
+        <Skeleton width="200px" height="20px" style={{ marginBottom: 24 }} />
+        <Skeleton width="100%" height="280px" />
+      </div>
+
+      <div className="glass-card" style={{ padding: 28, marginBottom: 24 }}>
+        <Skeleton width="200px" height="20px" style={{ marginBottom: 24 }} />
+        <Skeleton width="100%" height="220px" />
+      </div>
+    </div>
+  );
 
   const { cashflow } = data;
   const currentIdx = 2; // Index 2 is current month (we start -2 months back)

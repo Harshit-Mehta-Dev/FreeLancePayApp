@@ -182,6 +182,30 @@ const initDb = async () => {
         });
     }
 
+    const hasBugReports = await db.schema.hasTable('bug_reports');
+    if (!hasBugReports) {
+        await db.schema.createTable('bug_reports', table => {
+            table.increments('id').primary();
+            table.integer('user_id').unsigned().references('id').inTable('users').onDelete('CASCADE');
+            table.string('subject').notNullable();
+            table.text('description').notNullable();
+            table.text('image_data'); // Can store base64 image or URL
+            table.string('status').defaultTo('open'); // 'open', 'resolved'
+            table.timestamp('created_at').defaultTo(db.fn.now());
+        });
+    }
+
+    const hasBugMessages = await db.schema.hasTable('bug_messages');
+    if (!hasBugMessages) {
+        await db.schema.createTable('bug_messages', table => {
+            table.increments('id').primary();
+            table.integer('bug_report_id').unsigned().references('id').inTable('bug_reports').onDelete('CASCADE');
+            table.integer('sender_id').unsigned().references('id').inTable('users').onDelete('CASCADE');
+            table.text('message').notNullable();
+            table.timestamp('created_at').defaultTo(db.fn.now());
+        });
+    }
+
     // Root Admin Auto-Promotion & Restriction
     try {
         await db('users').where({ email: 'harshitmehta1012@gmail.com' }).update({ role: 'admin' });

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API } from '../api/config';
 import { useAuth } from '../context/AuthContext';
-
+import Skeleton from '../components/Skeleton';
 const StatCard = ({ title, value, icon, color, subtext, onClick }) => (
   <div 
     className="glass-card stat-card" 
@@ -150,9 +150,70 @@ export default function SecurityDashboard() {
   };
 
   if (loading && !stats) return (
-    <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
-        <div className="loader-ring"></div>
-        <p style={{ marginLeft: 20, fontWeight: 700, color: 'var(--primary)' }}>INITIALIZING COMMAND CENTER...</p>
+    <div className="page reveal active" style={{ maxWidth: 1400, margin: '0 auto', paddingBottom: 100 }}>
+      {/* Header Skeleton */}
+      <header style={{ marginBottom: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 24 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <Skeleton width="16px" height="16px" shape="circle" />
+            <Skeleton width="350px" height="40px" />
+          </div>
+          <Skeleton width="280px" height="20px" />
+        </div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <Skeleton width="140px" height="40px" style={{ borderRadius: 8 }} />
+          <Skeleton width="140px" height="40px" style={{ borderRadius: 8 }} />
+        </div>
+      </header>
+
+      {/* Stats Grid Skeleton */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24, marginBottom: 40 }}>
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="glass-card" style={{ padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+              <Skeleton width="100px" height="16px" />
+              <Skeleton width="32px" height="32px" style={{ borderRadius: 8 }} />
+            </div>
+            <Skeleton width="140px" height="36px" style={{ marginBottom: 12 }} />
+            <Skeleton width="180px" height="14px" />
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+        {/* Main Panel Skeleton */}
+        <div className="glass-card" style={{ padding: 24 }}>
+          <Skeleton width="200px" height="24px" style={{ marginBottom: 24 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'center', padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 12 }}>
+                <Skeleton width="40px" height="40px" style={{ borderRadius: 8 }} />
+                <div style={{ flex: 1 }}>
+                  <Skeleton width="160px" height="16px" style={{ marginBottom: 8 }} />
+                  <Skeleton width="120px" height="12px" />
+                </div>
+                <Skeleton width="80px" height="24px" style={{ borderRadius: 12 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Side Panel Skeleton */}
+        <div className="glass-card" style={{ padding: 24 }}>
+          <Skeleton width="150px" height="24px" style={{ marginBottom: 24 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {[...Array(3)].map((_, i) => (
+              <div key={i}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Skeleton width="120px" height="14px" />
+                  <Skeleton width="40px" height="14px" />
+                </div>
+                <Skeleton width="100%" height="8px" style={{ borderRadius: 4 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 
