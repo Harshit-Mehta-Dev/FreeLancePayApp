@@ -24,25 +24,70 @@ import CookieConsent from './components/CookieConsent';
 // Pages that require authentication
 const AUTH_REQUIRED = ['bills', 'income', 'cashflow', 'payments', 'calendar', 'settings', 'feedback', 'bugs'];
 
-// ─── Audio Engine ───
+// ─── Audio Engine (Mechanical Switch Sound) ───
 const playClickSound = () => {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
     
-    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    // Master Gain
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    masterGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    masterGain.connect(audioCtx.destination);
 
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
+    // 1. "Click" Layer - High frequency transient
+    const clickOsc = audioCtx.createOscillator();
+    const clickGain = audioCtx.createGain();
+    clickOsc.type = 'square'; // Sharper than sine
+    clickOsc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    clickOsc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.02);
+    
+    clickGain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    clickGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.03);
+    
+    clickOsc.connect(clickGain);
+    clickGain.connect(masterGain);
+    
+    // 2. "Mechanical Thud" - Low frequency body
+    const thudOsc = audioCtx.createOscillator();
+    const thudGain = audioCtx.createGain();
+    thudOsc.type = 'triangle';
+    thudOsc.frequency.setValueAtTime(120, audioCtx.currentTime);
+    thudOsc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.08);
+    
+    thudGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    thudGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    
+    thudOsc.connect(thudGain);
+    thudGain.connect(masterGain);
 
-    oscillator.start();
-    oscillator.stop(audioCtx.currentTime + 0.1);
+    // 3. "Noise" Layer - Texture (using procedural noise)
+    const bufferSize = audioCtx.sampleRate * 0.05; // 50ms of noise
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    
+    const noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = buffer;
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.02);
+    
+    noiseSource.connect(noiseGain);
+    noiseGain.connect(masterGain);
+
+    // Start all
+    clickOsc.start();
+    thudOsc.start();
+    noiseSource.start();
+    
+    // Stop all
+    clickOsc.stop(audioCtx.currentTime + 0.05);
+    thudOsc.stop(audioCtx.currentTime + 0.15);
+    noiseSource.stop(audioCtx.currentTime + 0.05);
+    
   } catch (_unused) { /* Audio blocked */ }
 };
 
