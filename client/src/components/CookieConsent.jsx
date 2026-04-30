@@ -18,7 +18,7 @@ export default function CookieConsent() {
   if (!visible) return null;
 
   return (
-    <div style={{
+    <div className="cookie-consent-card" style={{
       position: 'fixed',
       bottom: 24,
       left: 24,

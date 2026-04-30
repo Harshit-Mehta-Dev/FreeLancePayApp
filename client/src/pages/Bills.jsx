@@ -30,7 +30,7 @@ const BillModal = ({ bill, onClose, onSave }) => {
       <div className="modal">
         <div className="modal-header">
           <h2 className="modal-title">{bill ? '✏️ Edit Bill' : '➕ Add New Bill'}</h2>
-          <button className="btn btn-ghost btn-icon" onClick={onClose} style={{ color: 'var(--text-muted)', fontSize: 18 }}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} title="Close">✕</button>
         </div>
         <div className="modal-body">
           <div className="form-group">
@@ -104,7 +104,7 @@ const PayModal = ({ bill, onClose, onPay, currency }) => {
       <div className="modal">
         <div className="modal-header">
           <h2 className="modal-title">💳 Mark as Paid</h2>
-          <button className="btn btn-ghost btn-icon" onClick={onClose} style={{ fontSize: 18 }}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} title="Close">✕</button>
         </div>
         <div className="modal-body">
           <div style={{ padding: '16px 20px', background: 'rgba(16,185,129,0.08)', borderRadius: 12, border: '1px solid rgba(16,185,129,0.2)', marginBottom: 8 }}>
@@ -123,12 +123,11 @@ const PayModal = ({ bill, onClose, onPay, currency }) => {
             <input className="input" placeholder="e.g. Paid via wire transfer" value={note} onChange={e => setNote(e.target.value)} />
           </div>
         </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-            <button className="btn btn-success" onClick={handlePay} disabled={paying} style={{ flex: 2 }}>
-              {paying ? '⏳ Processing...' : `✅ Confirm Payment ${formatCurrency(amount, currency)}`}
-            </button>
-          </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose} style={{ minWidth: 100 }}>Cancel</button>
+          <button className="btn btn-success" onClick={handlePay} disabled={paying} style={{ flex: 1 }}>
+            {paying ? '⏳ Processing...' : `✅ Confirm Payment ${formatCurrency(amount, currency)}`}
+          </button>
         </div>
       </div>
     </div>
@@ -167,22 +166,31 @@ export default function Bills({ initialFilter = 'all' }) {
   useEffect(() => {
     let isMounted = true;
     const init = async () => {
-      await load();
-      if (!isMounted) return;
-      
-      const params = new URLSearchParams(window.location.search);
-      const payId = params.get('pay');
-      if (payId) {
-        // Find in already loaded bills instead of refetching
-        const b = bills.find(item => String(item.id) === payId);
-        if (b && b.status !== 'paid') {
-          setPayBill(b);
+      // Fetch latest data
+      try {
+        setLoading(true);
+        const { data } = await axios.get(`${API}/bills?_t=${Date.now()}`, { headers: apiHeaders() });
+        if (!isMounted) return;
+        setBills(data);
+        
+        // Handle direct-pay links
+        const params = new URLSearchParams(window.location.search);
+        const payId = params.get('pay');
+        if (payId) {
+          const b = data.find(item => String(item.id) === payId);
+          if (b && b.status !== 'paid') {
+            setPayBill(b);
+          }
         }
+      } catch (err) {
+        if (isMounted) addToast('Failed to initialize bills', 'error');
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
     init();
     return () => { isMounted = false; };
-  }, [load, bills]);
+  }, [addToast]); // Only run on mount
 
   const saveBill = async (form) => {
     try {

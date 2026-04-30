@@ -164,7 +164,7 @@ export const NotificationProvider = ({ children }) => {
           display: flex; flex-direction: column; gap: 12px;
         }
         .toast {
-          background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(12px);
+          background: rgba(15, 23, 42, 0.9); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
           border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 20px;
           border-radius: 12px; color: white; display: flex; align-items: center; gap: 12px;
           box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);

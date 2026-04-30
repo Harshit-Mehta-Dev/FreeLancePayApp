@@ -131,14 +131,14 @@ export default function Income() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+      <div className="stats-grid" style={{ marginBottom: 24 }}>
         {[
           { label: 'Total Earned', value: total, icon: '🏆', grad: 'linear-gradient(135deg, #f59e0b, #d97706)' },
           { label: 'This Month', value: thisMonth, icon: '📅', grad: 'linear-gradient(135deg, #10b981, #059669)' },
           { label: 'Top Client', value: topClient?.[0] || '—', icon: '⭐', isText: true },
           { label: 'Entries', value: income.length, icon: '📋', isCount: true },
         ].map(s => (
-          <div key={s.label} className="glass-card" style={{ flex: 1, minWidth: 160, padding: 20 }}>
+          <div key={s.label} className="glass-card" style={{ padding: 20 }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{s.label}</div>
             <div style={{ fontSize: s.isText ? 18 : 22, fontWeight: 800, fontFamily: 'Space Grotesk, sans-serif', background: s.grad, WebkitBackgroundClip: s.grad ? 'text' : undefined, WebkitTextFillColor: s.grad ? 'transparent' : undefined }}>
@@ -196,12 +196,12 @@ export default function Income() {
               <tbody>
                 {income.map(i => (
                   <tr key={i.id}>
-                    <td style={{ fontWeight: 600 }}>{i.description}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{i.client || '—'}</td>
-                    <td><span style={{ fontSize: 12, background: 'rgba(245,158,11,0.1)', color: '#fcd34d', padding: '2px 8px', borderRadius: 99, border: '1px solid rgba(245,158,11,0.2)' }}>{i.category}</span></td>
-                    <td style={{ color: 'var(--text-muted)' }}>{formatDate(i.received_date)}</td>
-                    <td style={{ fontWeight: 700, color: '#6ee7b7', fontFamily: 'Space Grotesk, sans-serif' }}>{formatCurrency(i.amount, currency)}</td>
-                    <td>
+                    <td data-label="Description" style={{ fontWeight: 600 }}>{i.description}</td>
+                    <td data-label="Client" style={{ color: 'var(--text-secondary)' }}>{i.client || '—'}</td>
+                    <td data-label="Category"><span style={{ fontSize: 12, background: 'rgba(245,158,11,0.1)', color: '#fcd34d', padding: '2px 8px', borderRadius: 99, border: '1px solid rgba(245,158,11,0.2)' }}>{i.category}</span></td>
+                    <td data-label="Date" style={{ color: 'var(--text-muted)' }}>{formatDate(i.received_date)}</td>
+                    <td data-label="Amount" style={{ fontWeight: 700, color: '#6ee7b7', fontFamily: 'Space Grotesk, sans-serif' }}>{formatCurrency(i.amount, currency)}</td>
+                    <td data-label="Action">
                       <button className="btn btn-ghost btn-sm btn-icon" onClick={() => deleteIncome(i.id)} style={{ color: '#f87171' }}>🗑</button>
                     </td>
                   </tr>

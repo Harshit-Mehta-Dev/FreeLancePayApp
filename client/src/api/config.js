@@ -3,7 +3,10 @@ import axios from 'axios';
 axios.defaults.withCredentials = true;
 axios.defaults.timeout = 10000; // 10 seconds timeout
 
-export const API = import.meta.env.VITE_API_URL || 'https://freelance-pay-api.cyber-freelance.workers.dev/api';
+const LOCAL_API = '/api'; // Use Vite proxy for local dev
+const CLOUD_API = 'https://freelance-pay-api.cyber-freelance.workers.dev/api';
+
+export const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? LOCAL_API : CLOUD_API);
 
 export const apiHeaders = () => {
   return {}; // Placeholder for now, can be used for custom headers if needed

@@ -161,6 +161,17 @@ export default function Bugs() {
             </div>
             
             <div style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Encryption Notice */}
+              <div style={{ 
+                textAlign: 'center', margin: '0 0 10px', padding: '8px 16px', 
+                background: 'rgba(16, 185, 129, 0.1)', borderRadius: 20, 
+                border: '1px solid rgba(16, 185, 129, 0.2)',
+                fontSize: 11, color: '#10b981', fontWeight: 800, letterSpacing: '1.5px',
+                fontFamily: 'Space Grotesk, sans-serif', textTransform: 'uppercase'
+              }}>
+                🛡️ End-to-End Encryption Active // Secure Channel Established
+              </div>
+
               {/* Initial Bug Description as the first message */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <div style={{ 

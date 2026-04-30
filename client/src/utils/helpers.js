@@ -17,11 +17,15 @@ export const daysUntil = (dateStr) => {
 export const CATEGORIES = [
   { value: 'software', label: 'Software & SaaS', icon: '💻', color: 'var(--primary)' },
   { value: 'tech', label: 'Tech & Hosting', icon: '🖥️', color: '#06b6d4' },
+  { value: 'rent', label: 'Office & Rent', icon: '🏢', color: '#8b5cf6' },
   { value: 'invoice', label: 'Client Invoice', icon: '📄', color: '#f59e0b' },
   { value: 'utility', label: 'Utilities', icon: '⚡', color: '#10b981' },
   { value: 'subscription', label: 'Subscription', icon: '🔄', color: '#ec4899' },
-  { value: 'tax', label: 'Tax & Legal', icon: '📋', color: '#ef4444' },
   { value: 'marketing', label: 'Marketing', icon: '📢', color: '#f97316' },
+  { value: 'travel', label: 'Travel & Food', icon: '✈️', color: '#3b82f6' },
+  { value: 'tax', label: 'Tax & Legal', icon: '📋', color: '#ef4444' },
+  { value: 'health', label: 'Insurance & Health', icon: '🏥', color: '#14b8a6' },
+  { value: 'education', label: 'Learning & Kurs', icon: '🎓', color: '#a855f7' },
   { value: 'other', label: 'Other', icon: '📦', color: '#64748b' },
 ];
 

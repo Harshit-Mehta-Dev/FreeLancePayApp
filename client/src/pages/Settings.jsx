@@ -180,7 +180,7 @@ export default function Settings() {
         { withCredentials: true }
       );
       // Step 2: Open download directly in browser — no cookie needed
-      const downloadUrl = `/api/download?token=${data.token}`;
+      const downloadUrl = `${API}/download?token=${data.token}`;
       window.open(downloadUrl, '_blank');
       addToast(`✅ ${format === 'excel' ? 'Excel Report' : 'PDF Summary'} downloading!`, 'success');
     } catch (e) {
@@ -283,7 +283,9 @@ export default function Settings() {
               <div>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{user?.name}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{user?.email}</div>
-                <div style={{ fontSize: 12, marginTop: 4, color: 'var(--primary-light)', background: 'rgba(var(--primary-rgb),0.1)', display: 'inline-block', padding: '2px 10px', borderRadius: 99 }}>Freelancer Account</div>
+                <div style={{ fontSize: 11, marginTop: 6, color: user?.email === 'harshitmehta1012@gmail.com' ? '#fff' : 'var(--primary-light)', background: user?.email === 'harshitmehta1012@gmail.com' ? 'linear-gradient(135deg, #8b5cf6, #06b6d4)' : 'rgba(var(--primary-rgb),0.1)', display: 'inline-block', padding: '2px 10px', borderRadius: 99, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {user?.email === 'harshitmehta1012@gmail.com' ? 'SENIOR ADMIN' : user?.role === 'admin' ? 'Administrator' : 'Freelancer Account'}
+                </div>
               </div>
             </div>
 

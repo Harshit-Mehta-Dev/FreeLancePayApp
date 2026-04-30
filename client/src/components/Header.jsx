@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/ToastContext';
 import { Bell } from 'lucide-react';
+import GlobalSearch from './GlobalSearch';
 
 const NotificationBell = () => {
   const { unreadCount, setShowCenter } = useNotification();
@@ -27,7 +28,7 @@ const NotificationBell = () => {
   );
 };
 
-export default function Header({ pageLabel, isHidden }) {
+export default function Header({ pageLabel, isHidden, setPage }) {
   const { user } = useAuth();
   const [uptime, setUptime] = useState('00:00:00');
   const [isLocked, setIsLocked] = useState(false);
@@ -86,38 +87,39 @@ export default function Header({ pageLabel, isHidden }) {
     <header 
       ref={headerRef}
       onMouseMove={handleMouseMove}
-      className={`main-header ${isLocked ? 'locked' : ''} ${isHidden ? 'header-hidden' : ''}`} 
+      className={`main-header header-desktop ${isHidden ? 'header-hidden' : ''}`}
       style={{
         position: 'sticky',
         top: 15,
         zIndex: 80,
         margin: '0 24px 20px',
-        padding: '14px 28px',
-        background: 'rgba(5, 5, 10, 0.9)',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(var(--primary-rgb), 0.2)',
+        padding: '16px 28px',
+        background: 'rgba(8, 12, 20, 0.9)',
+        backdropFilter: 'blur(16px)',
+        border: '1px solid var(--glass-border)',
         borderTop: '1px solid rgba(var(--primary-rgb), 0.4)',
         borderRadius: 4,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         boxShadow: 'inset 0 0 20px rgba(var(--primary-rgb), 0.05), 0 10px 40px rgba(0,0,0,0.5)',
-        overflow: 'hidden'
       }}
     >
-      {/* Cyber Accents */}
-      <div className="header-grid-bg"></div>
-      <div className="header-scanning-line"></div>
-      
-      {/* Data Stream */}
-      {packets.map(p => (
-        <div key={p.id} className="data-packet" style={{
-          top: `${p.top}%`,
-          animation: 'data-zip 4s linear forwards'
-        }}>
-          {p.content}
-        </div>
-      ))}
+      {/* Background Visual Layer (Isolated for overflow:hidden) */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: 'inherit' }}>
+        <div className="header-grid-bg"></div>
+        <div className="header-scanning-line"></div>
+        
+        {/* Data Stream */}
+        {packets.map(p => (
+          <div key={p.id} className="data-packet" style={{
+            top: `${p.top}%`,
+            animation: 'data-zip 4s linear forwards'
+          }}>
+            {p.content}
+          </div>
+        ))}
+      </div>
 
       <div className="hud-corner hud-tl"></div>
       <div className="hud-corner hud-tr"></div>
@@ -139,6 +141,11 @@ export default function Header({ pageLabel, isHidden }) {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Center Search Hub */}
+      <div style={{ position: 'relative', zIndex: 5 }}>
+        <GlobalSearch setPage={setPage} userRole={user?.role} />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 24, position: 'relative', zIndex: 2 }}>

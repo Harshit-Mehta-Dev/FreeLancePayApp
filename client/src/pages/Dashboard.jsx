@@ -67,7 +67,7 @@ const GuestDashboard = ({ onLogin, onRegister }) => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 64 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 64 }} className="stats-grid">
         {[
           { icon: '🔔', title: 'Overdue Alerts', desc: 'Get instant visual alerts when bills go past their due date with pulsing indicators.' },
           { icon: '🔄', title: 'Recurring Payments', desc: 'Set weekly, monthly, quarterly or yearly bills — next ones auto-generate on payment.' },
@@ -155,7 +155,11 @@ const GuestDashboard = ({ onLogin, onRegister }) => {
         </div>
 
         <style>{`
-          .how-it-works-detailed { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 40px; }
+          .how-it-works-detailed { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; }
+          @media (max-width: 600px) {
+            .how-it-works-detailed { grid-template-columns: 1fr; }
+            .how-step { padding: 30px 24px; }
+          }
           .how-step {
             position: relative; padding: 40px; background: rgba(255,255,255,0.02);
             border-radius: 28px; border: 1px solid rgba(255,255,255,0.05);
@@ -231,8 +235,12 @@ const PreviewChart = () => (
 );
 
 // ─── Authenticated Dashboard ───────────────────────────────────────────────────
-const StatCard = ({ icon, label, value, sub, gradient, currency }) => (
-  <div className="glass-card animate-fade" style={{ flex: 1, minWidth: 180, padding: 22 }}>
+const StatCard = ({ icon, label, value, sub, gradient, currency, isOverdue }) => (
+  <div className="glass-card stat-card" style={{ 
+    flex: 1, minWidth: 180, padding: 22, position: 'relative',
+    animation: isOverdue ? 'pulse-glow-red 2s infinite' : 'none',
+    border: isOverdue ? '1px solid rgba(239, 68, 68, 0.5)' : undefined
+  }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <div>
         <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 8 }}>{label}</div>
@@ -243,6 +251,9 @@ const StatCard = ({ icon, label, value, sub, gradient, currency }) => (
       </div>
       <div style={{ fontSize: 28, opacity: 0.8 }}>{icon}</div>
     </div>
+    <style>{`
+      @keyframes pulse-glow-red { 0%, 100% { box-shadow: 0 0 0px rgba(239, 68, 68, 0); } 50% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); } }
+    `}</style>
   </div>
 );
 
@@ -279,35 +290,83 @@ const WelcomeOverlay = ({ onDismiss, userName }) => (
            <ChevronRight size={20} />
         </button>
      </div>
-     <style>{`
-        .welcome-overlay {
-          position: fixed; inset: 0; background: rgba(8, 12, 20, 0.85); backdrop-filter: blur(12px);
-          z-index: 1000000; display: flex; align-items: center; justify-content: center; padding: 24px;
-          animation: fadeIn 0.4s ease-out;
-        }
-        .welcome-card {
-          width: 100%; max-width: 520px; padding: 60px 48px; text-align: center; position: relative; overflow: hidden;
-          background: #0B0E14; border-radius: 40px; border: 1px solid rgba(255,255,255,0.08);
-          box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 60px rgba(34, 211, 238, 0.1);
-          animation: welcomeIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-        @keyframes welcomeIn { from { opacity: 0; transform: scale(0.8) translateY(30px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        .welcome-glow { position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(34, 211, 238, 0.08), transparent 70%); pointer-events: none; }
-        .welcome-icon-box { font-size: 64px; margin-bottom: 24px; }
-        .welcome-title { font-size: 32px; font-weight: 900; color: white; margin-bottom: 16px; letter-spacing: -1.5px; }
-        .welcome-text { color: #94a3b8; font-size: 16px; line-height: 1.6; margin-bottom: 40px; }
-        .welcome-cta { height: 60px; width: 100%; border-radius: 20px; font-size: 16px; font-weight: 900; }
-        .welcome-p-wrap { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-        .welcome-p { position: absolute; font-size: 24px; opacity: 0.15; filter: blur(1px); animation: welcomeFloat 6s ease-in-out infinite; }
-        @keyframes welcomeFloat { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-30px) rotate(15deg); } }
-     `}</style>
   </div>
 );
 
-const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
+const PromotionOverlay = ({ onDismiss, userName }) => (
+  <div className="welcome-overlay" style={{ background: 'rgba(var(--primary-rgb), 0.15)', backdropFilter: 'blur(30px)' }} onClick={onDismiss}>
+     <div className="welcome-card glass-card" style={{ border: '1px solid var(--primary)', boxShadow: '0 0 100px rgba(var(--primary-rgb), 0.4)' }} onClick={e => e.stopPropagation()}>
+        <div className="welcome-p-wrap">
+           {[0,1,2,3,4,5].map(i => (
+             <div key={i} className="welcome-p" style={{ 
+               left: `${Math.random() * 100}%`, 
+               top: `${Math.random() * 100}%`,
+               animationDelay: `${i * 0.5}s`,
+               fontSize: 32
+             }}>🎖️</div>
+           ))}
+        </div>
+        <div className="welcome-glow" style={{ background: 'radial-gradient(circle at center, rgba(var(--primary-rgb), 0.2), transparent 70%)' }} />
+        <div className="welcome-icon-box animate-float" style={{ fontSize: 80 }}>🛡️</div>
+        <h2 className="welcome-title" style={{ background: 'linear-gradient(135deg, #fff, var(--primary-light))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          Clearance Level: ADMIN
+        </h2>
+        <h3 style={{ color: '#fff', fontSize: 20, marginBottom: 16 }}>Congratulations, {userName}!</h3>
+        <p className="welcome-text">
+          You have been officially promoted to **Platform Administrator**. Your digital clearance has been elevated, granting you full access to the Security Command Center and advanced telemetry tools.
+        </p>
+        <button className="btn btn-primary welcome-cta" onClick={onDismiss} style={{ background: 'var(--primary)', border: 'none', boxShadow: '0 10px 30px rgba(var(--primary-rgb), 0.5)' }}>
+           <span>Enter Command Center</span>
+           <ChevronRight size={20} />
+        </button>
+     </div>
+  </div>
+);
+const OverlayStyles = () => (
+  <style>{`
+    .welcome-overlay {
+      position: fixed; inset: 0; background: rgba(8, 12, 20, 0.85); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+      z-index: 1000000; display: flex; align-items: center; justify-content: center; padding: 24px;
+      animation: fadeIn 0.4s ease-out;
+    }
+    .welcome-card {
+      width: 100%; max-width: 520px; padding: 60px 48px; text-align: center; position: relative; overflow: hidden;
+      background: #0B0E14; border-radius: 40px; border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 60px rgba(var(--primary-rgb), 0.1);
+      animation: welcomeIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    @keyframes welcomeIn { from { opacity: 0; transform: scale(0.8) translateY(30px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .welcome-glow { position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(var(--primary-rgb), 0.08), transparent 70%); pointer-events: none; }
+    .welcome-icon-box { font-size: 64px; margin-bottom: 24px; }
+    .welcome-title { font-size: 32px; font-weight: 900; color: white; margin-bottom: 16px; letter-spacing: -1.5px; }
+    .welcome-text { color: #94a3b8; font-size: 16px; line-height: 1.6; margin-bottom: 40px; }
+    .welcome-cta { height: 60px; width: 100%; border-radius: 20px; font-size: 16px; font-weight: 900; }
+    .welcome-p-wrap { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .welcome-p { position: absolute; font-size: 24px; opacity: 0.15; filter: blur(1px); animation: welcomeFloat 6s ease-in-out infinite; }
+    @keyframes welcomeFloat { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-30px) rotate(15deg); } }
+  `}</style>
+);
+
+const AuthDashboard = ({ currency, setPage, setBillFilter, showWelcome, onWelcomeClose }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPromo, setShowPromo] = useState(false);
   const { user } = useAuth();
+
+  useEffect(() => {
+    const checkPromo = async () => {
+      try {
+        const { data: notes } = await axios.get(`${API}/notifications`, { headers: apiHeaders() });
+        const promo = notes.find(n => n.type === 'promotion' && !n.is_read);
+        if (promo) {
+          setShowPromo(true);
+          await axios.patch(`${API}/notifications/${promo.id}/read`, {}, { headers: apiHeaders() });
+        }
+      } catch (e) {}
+    };
+    if (user?.role === 'admin') checkPromo();
+  }, [user]);
+
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
@@ -335,9 +394,9 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
         <Skeleton width="180px" height="36px" style={{ borderRadius: 99 }} />
       </div>
 
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="glass-card" style={{ flex: 1, minWidth: 180, padding: 22 }}>
+          <div key={i} className="glass-card" style={{ padding: 22 }}>
             <Skeleton width="80px" height="16px" style={{ marginBottom: 8 }} />
             <Skeleton width="120px" height="32px" style={{ marginBottom: 8 }} />
             <Skeleton width="60px" height="14px" />
@@ -376,12 +435,37 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
       <p>Unable to retrieve dashboard data. Please check your connection.</p>
     </div>
   );
-  const { totalDue, overdueAmt, overdueCount, paidThisMonth, incomeThisMonth, upcomingCount, cashflow, recentBills, byCategory } = data;
+  const { 
+    totalDue, 
+    overdueAmt: serverOverdueAmt, 
+    overdueCount: serverOverdueCount, 
+    paidThisMonth, 
+    incomeThisMonth, 
+    upcomingCount: serverUpcomingCount,
+    cashflow, 
+    recentBills, 
+    byCategory 
+  } = data;
+  
+  // Real-time stat recalculation for accuracy
+  const processedBills = (recentBills || []).map(b => {
+    const days = daysUntil(b.due_date);
+    const isActuallyOverdue = b.status !== 'paid' && days < 0;
+    return { ...b, status: isActuallyOverdue ? 'overdue' : b.status };
+  });
+
+  // Use server-side stats for cards to ensure all bills are counted, not just the top 5
+  const overdueCount = serverOverdueCount || 0;
+  const overdueAmt = serverOverdueAmt || 0;
+  const upcomingCount = serverUpcomingCount || 0;
+
   const PIE_COLORS = ['var(--primary)','#06b6d4','#f59e0b','#10b981','#ec4899','#ef4444','#f97316','#64748b'];
 
   return (
     <>
       {showWelcome && <WelcomeOverlay userName={user?.name?.split(' ')[0]} onDismiss={onWelcomeClose} />}
+      {showPromo && <PromotionOverlay userName={user?.name?.split(' ')[0]} onDismiss={() => setShowPromo(false)} />}
+      <OverlayStyles />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
         <div>
           <h1 className="page-title">Good {getGreeting()}, {user?.name?.split(' ')[0]} 👋</h1>
@@ -399,11 +483,11 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
       </div>
 
       {overdueCount > 0 && (
-        <div className="alert-banner alert-banner-overdue" style={{ marginBottom: 24 }}>
+        <div className="alert-banner alert-banner-overdue" style={{ marginBottom: 24, cursor: 'pointer' }} onClick={() => { setBillFilter('overdue'); setPage('bills'); }}>
           <span style={{ fontSize: 20 }}>🚨</span>
           <div>
             <strong>{overdueCount} overdue bill{overdueCount > 1 ? 's' : ''}</strong> totaling{' '}
-            <strong>{formatCurrency(overdueAmt, currency)}</strong> — action required!
+            <strong>{formatCurrency(overdueAmt, currency)}</strong> — click to review!
           </div>
         </div>
       )}
@@ -420,9 +504,13 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
       )}
 
       {/* Stat Cards */}
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
-        <StatCard icon="💸" label="Total Due" value={totalDue} sub={`${upcomingCount} upcoming bills`} gradient="linear-gradient(135deg, var(--primary), #06b6d4)" currency={currency} />
-        <StatCard icon="🔴" label="Overdue Amount" value={overdueAmt} sub={`${overdueCount} overdue`} gradient="linear-gradient(135deg, #ef4444, #dc2626)" currency={currency} />
+      <div className="stats-grid" style={{ marginBottom: 24 }}>
+        <div onClick={() => { setBillFilter('all'); setPage('bills'); }} style={{ cursor: 'pointer' }}>
+          <StatCard icon="💸" label="Total Due" value={totalDue} sub={`${upcomingCount} upcoming bills`} gradient="linear-gradient(135deg, var(--primary), #06b6d4)" currency={currency} />
+        </div>
+        <div onClick={() => { setBillFilter('overdue'); setPage('bills'); }} style={{ cursor: 'pointer' }}>
+          <StatCard icon="🔴" label="Overdue Amount" value={overdueAmt} sub={`${overdueCount} overdue`} gradient="linear-gradient(135deg, #ef4444, #dc2626)" currency={currency} isOverdue={overdueCount > 0} />
+        </div>
         <StatCard icon="✅" label="Paid This Month" value={paidThisMonth} sub="Payments made" gradient="linear-gradient(135deg, #10b981, #059669)" currency={currency} />
         <StatCard icon="📥" label="Income This Month" value={incomeThisMonth} sub="Received" gradient="linear-gradient(135deg, #f59e0b, #d97706)" currency={currency} />
         <StatCard icon="📊" label="Net This Month" value={incomeThisMonth - paidThisMonth}
@@ -432,7 +520,7 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
       </div>
 
       {/* Charts row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 24 }}>
+      <div className="dashboard-grid" style={{ marginBottom: 24 }}>
         <div className="glass-card" style={{ padding: 24 }}>
           <h3 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, marginBottom: 20, fontSize: 16 }}>📈 Cashflow Projection</h3>
           <ResponsiveContainer width="100%" height={240}>
@@ -492,14 +580,14 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
         {recentBills.length > 0 ? (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Bill</th><th>Due Date</th><th>Amount</th><th>Status</th><th>Days</th></tr></thead>
+              <thead><tr><th>Bill</th><th>Due Date</th><th>Amount</th><th>Status</th><th>Days</th><th>Action</th></tr></thead>
               <tbody>
-                {recentBills.map(bill => {
+                {processedBills.map(bill => {
                   const days = daysUntil(bill.due_date);
                   const cat = getCategoryMeta(bill.category);
                   return (
                     <tr key={bill.id}>
-                      <td>
+                      <td data-label="Bill">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={{ fontSize: 18 }}>{cat.icon}</span>
                           <div>
@@ -508,13 +596,28 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
                           </div>
                         </div>
                       </td>
-                      <td style={{ color: 'var(--text-secondary)' }}>{formatDate(bill.due_date)}</td>
-                      <td style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif' }}>{formatCurrency(bill.amount, currency)}</td>
-                      <td><span className={`badge badge-${bill.status}`}>{bill.status}</span></td>
-                      <td>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: days < 0 ? '#ef4444' : days <= 7 ? '#f59e0b' : 'var(--text-muted)' }}>
-                          {days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Today!' : `${days}d`}
+                      <td data-label="Due Date" style={{ color: 'var(--text-secondary)' }}>{formatDate(bill.due_date)}</td>
+                      <td data-label="Amount" style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif' }}>{formatCurrency(bill.amount, currency)}</td>
+                      <td data-label="Status">
+                        <span className={`badge badge-${bill.status === 'upcoming' && daysUntil(bill.due_date) < 0 ? 'overdue' : bill.status}`}>
+                          {bill.status === 'upcoming' && daysUntil(bill.due_date) < 0 ? 'OVERDUE' : bill.status.toUpperCase()}
                         </span>
+                      </td>
+                      <td data-label="Days">
+                        <span style={{ color: days < 0 ? '#f87171' : days <= 3 ? '#fbbf24' : 'var(--text-muted)', fontSize: 13, fontWeight: 700 }}>
+                          {days === 0 ? 'Due Today' : days < 0 ? `${Math.abs(days)}d late` : `${days}d left`}
+                        </span>
+                      </td>
+                      <td data-label="Action">
+                        {bill.status !== 'paid' && (
+                          <button 
+                            className="btn btn-ghost btn-sm" 
+                            style={{ padding: '4px 8px', fontSize: 11, color: 'var(--primary-light)', minWidth: 'unset', width: 'auto' }}
+                            onClick={() => { setBillFilter('all'); setPage('bills'); }}
+                          >
+                            💳 Pay
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

@@ -88,7 +88,7 @@ const playClickSound = () => {
     thudOsc.stop(audioCtx.currentTime + 0.15);
     noiseSource.stop(audioCtx.currentTime + 0.05);
     
-  } catch (_unused) { /* Audio blocked */ }
+  } catch { /* Audio blocked */ }
 };
 
 const NAV = [
@@ -327,12 +327,18 @@ function Sidebar({ page, setPage, user, logout, open, setOpen, onLogin, onRegist
 
 function MobileHeader({ setOpen }) {
   return (
-    <div style={{ display: 'none', position: 'sticky', top: 0, zIndex: 90, padding: '14px 16px', background: 'rgba(8,12,20,0.95)', borderBottom: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)', alignItems: 'center', justifyContent: 'space-between' }} className="mobile-header">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 18 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>💸</div>
-        FreeLancePay App
+    <div className="mobile-header" style={{ position: 'sticky', top: 0, zIndex: 1000, padding: '12px 16px', background: 'rgba(8,12,20,0.95)', borderBottom: '1px solid rgba(var(--primary-rgb), 0.2)', backdropFilter: 'blur(20px)', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: 18, color: '#fff' }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--gradient-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 0 15px rgba(var(--primary-rgb), 0.3)' }}>💸</div>
+        <span style={{ letterSpacing: -0.5 }}>FreeLancePay</span>
       </div>
-      <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--text-primary)' }}>☰</button>
+      <button 
+        onClick={() => setOpen(o => !o)} 
+        className="btn-icon"
+        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: 20, width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        ☰
+      </button>
     </div>
   );
 }
@@ -411,7 +417,7 @@ const MaintenanceOverlay = () => {
 
 export default function App() {
   const { user, loading, isBanned, logout } = useAuth();
-  const { theme, colorThemeId } = useTheme();
+  const { colorThemeId } = useTheme();
   const [page, setPage] = useState('dashboard');
   const [billFilter, setBillFilter] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -422,12 +428,10 @@ export default function App() {
   const [serverDown, setServerDown] = useState(false);
   const lastScrollY = useRef(0);
 
-  // Force reset to dashboard on every fresh load/refresh
   useEffect(() => {
-    const path = window.location.pathname.replace('/', '');
-    // Only allow special routes to override if explicitly in URL, 
-    // but user requested to ALWAYS open dashboard, so we force it.
-    setPage('dashboard');
+    // Force reset to dashboard on every fresh load/refresh
+    // user requested to ALWAYS open dashboard, so we force it.
+    if (page !== 'dashboard') setPage('dashboard');
     
     // Clean up URL to keep it at root
     if (window.location.pathname !== '/') {
@@ -556,8 +560,8 @@ export default function App() {
             user.currency === 'INR' ? '₹' : (user.currency === 'EUR' ? '€' : '$')
           );
         }
-      } catch (e) {
-        console.warn('Sentinel failed to scan financials');
+      } catch (err) {
+        console.warn('Sentinel failed to scan financials', err);
       }
     };
 
@@ -565,27 +569,28 @@ export default function App() {
     checkFinancials();
   }, [user]);
 
-  const envAssets = React.useMemo(() => ({
-    streams: [...Array(15)].map(() => ({
+  const envAssets = React.useMemo(() => {
+    const genStreams = () => [...Array(15)].map(() => ({
       left: `${Math.random() * 100}%`,
       delay: `${Math.random() * 3}s`,
       duration: `${Math.random() * 2 + 2}s`
-    })),
-    drops: [...Array(12)].map(() => ({
+    }));
+    const genDrops = () => [...Array(12)].map(() => ({
       left: `${Math.random() * 100}%`,
       delay: `${Math.random() * 5}s`,
       duration: `${Math.random() * 3 + 4}s`,
       fontSize: `${Math.random() * 15 + 15}px`,
       emoji: ['💸', '✨', '💰', '💎'][Math.floor(Math.random() * 4)]
-    })),
-    particles: [...Array(12)].map(() => ({
+    }));
+    const genParticles = () => [...Array(12)].map(() => ({
       left: `${Math.random() * 100}%`,
       top: `${Math.random() * 100}%`,
       delay: `${Math.random() * 8}s`,
       duration: `${12 + Math.random() * 12}s`,
       size: `${12 + Math.random() * 10}px`
-    }))
-  }), []);
+    }));
+    return { streams: genStreams(), drops: genDrops(), particles: genParticles() };
+  }, []);
 
   if (loading || isRefreshing) return (
     <div className="refresh-overlay">
@@ -705,13 +710,14 @@ export default function App() {
         onRegister={() => setAuthMode('register')}
         onRefresh={handleRefresh}
       />
-      <div className="main-content" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <div className="main-content">
         <MobileHeader setOpen={setSidebarOpen} />
         <Header 
           pageLabel={page.charAt(0).toUpperCase() + page.slice(1)} 
           isHidden={isHeaderHidden}
+          setPage={setPage}
         />
-        <div style={{ flex: 1, padding: '20px 24px' }}>
+        <div className="main-content-inner">
           {renderPage()}
         </div>
         <Footer />
