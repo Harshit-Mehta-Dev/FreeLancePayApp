@@ -290,10 +290,10 @@ export default function Bugs() {
       </div>
 
       {showNewBugForm && !isAdmin ? (
-        <div className="glass-card animate-in-up" style={{ padding: 24, marginBottom: 30 }}>
+        <div className="glass-card animate-in-up" style={{ padding: 24, marginBottom: 30, position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h2 style={{ fontSize: 20, fontWeight: 700 }}>New Bug Report</h2>
-            <button className="btn btn-ghost btn-sm" onClick={() => setShowNewBugForm(false)}>Cancel</button>
+            <button className="modal-close-btn" onClick={() => setShowNewBugForm(false)} title="Close">✕</button>
           </div>
           <form onSubmit={submitBug} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div className="form-group">

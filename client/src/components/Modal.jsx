@@ -37,8 +37,12 @@ const Modal = ({ isOpen, onClose, title, children }) => {
           width: 100%;
           max-width: 500px;
           border-radius: var(--radius-lg);
+          background: var(--modal-bg);
+          backdrop-filter: blur(24px) saturate(180%);
+          WebkitBackdropFilter: blur(24px) saturate(180%);
+          border: 1px solid var(--glass-border);
           overflow: hidden;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          box-shadow: var(--shadow-premium), var(--glass-inner-glow);
         }
         .modal-header {
           padding: 1.5rem 2rem;

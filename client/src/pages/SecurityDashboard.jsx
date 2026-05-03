@@ -464,7 +464,7 @@ export default function SecurityDashboard() {
                     <div className="form-group">
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Target Recipient</label>
                       <select 
-                        className="cyber-input"
+                        className="select"
                         value={selectedUserForMessage?.id || ''}
                         onChange={(e) => {
                           const u = users.find(u => u.id === parseInt(e.target.value));
@@ -576,7 +576,7 @@ export default function SecurityDashboard() {
                 <span style={{ fontSize: 24 }}>💬</span>
                 <h2 className="modal-title">Feedback Details</h2>
               </div>
-              <button className="btn btn-ghost btn-icon" onClick={() => setSelectedFeedback(null)}>✕</button>
+              <button className="modal-close-btn" onClick={() => setSelectedFeedback(null)} title="Close">✕</button>
             </div>
             <div className="modal-body" style={{ padding: '30px 40px' }}>
               <div style={{ marginBottom: 24 }}>

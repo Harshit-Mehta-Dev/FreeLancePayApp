@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import axios from 'axios';
 import { API, apiHeaders } from '../api/config';
 import { useAuth } from '../context/AuthContext';
@@ -13,70 +14,78 @@ const BillModal = ({ bill, onClose, onSave }) => {
   const [form, setForm] = useState({
     name: bill?.name || '', category: bill?.category || 'software',
     amount: bill?.amount || '', due_date: bill?.due_date || new Date().toISOString().split('T')[0],
-    recurrence: bill?.recurrence || 'monthly', notes: bill?.notes || '', client: bill?.client || '',
+    recurrence: bill?.recurrence || 'one-time', notes: bill?.notes || '', client: bill?.client || '',
   });
   const [saving, setSaving] = useState(false);
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleSave = async () => {
     if (!form.name || !form.amount || !form.due_date) return;
+    if (saving) return;
     setSaving(true);
-    await onSave({ ...form, amount: parseFloat(form.amount) });
-    setSaving(false);
+    try {
+      await onSave({ ...form, amount: parseFloat(form.amount) });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        className="modal"
+      >
         <div className="modal-header">
-          <h2 className="modal-title">{bill ? '✏️ Edit Bill' : '➕ Add New Bill'}</h2>
-          <button className="modal-close-btn" onClick={onClose} title="Close">✕</button>
+          <h2 className="modal-title">{bill ? 'Edit Financial Entry' : 'New Strategic Bill'}</h2>
+          <button className="modal-close-btn" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <div className="form-group">
-            <label className="form-label">Bill Name *</label>
-            <input className="input" placeholder="e.g. AWS Hosting" value={form.name} onChange={set('name')} required />
+            <label className="form-label">Mission / Bill Name</label>
+            <input className="input" placeholder="e.g. Cloud Infrastructure" value={form.name} onChange={set('name')} required />
           </div>
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">Category</label>
+              <label className="form-label">Classification</label>
               <select className="select" value={form.category} onChange={set('category')}>
-                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.icon} {c.label}</option>)}
+                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.icon} {c.label.toUpperCase()}</option>)}
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Amount *</label>
-              <input className="input" type="number" placeholder="0.00" min="0" step="0.01" value={form.amount} onChange={set('amount')} required />
+              <label className="form-label">Allocated Capital (₹)</label>
+              <input className="input" type="number" placeholder="0.00" value={form.amount} onChange={set('amount')} required />
             </div>
           </div>
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">Due Date *</label>
+              <label className="form-label">Target Due Date</label>
               <input className="input" type="date" value={form.due_date} onChange={set('due_date')} required />
             </div>
             <div className="form-group">
-              <label className="form-label">Recurrence</label>
+              <label className="form-label">Recurrence Cycle</label>
               <select className="select" value={form.recurrence} onChange={set('recurrence')}>
-                {RECURRENCES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                {RECURRENCES.map(r => <option key={r.value} value={r.value}>{r.label.toUpperCase()}</option>)}
               </select>
             </div>
           </div>
           <div className="form-group">
-            <label className="form-label">Client / Vendor</label>
-            <input className="input" placeholder="Who is this bill for/from?" value={form.client} onChange={set('client')} />
+            <label className="form-label">Strategic Partner / Vendor</label>
+            <input className="input" placeholder="Entity name..." value={form.client} onChange={set('client')} />
           </div>
-          <div className="form-group">
-            <label className="form-label">Notes</label>
-            <textarea className="textarea" placeholder="Any extra details..." value={form.notes} onChange={set('notes')} />
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Operational Notes</label>
+            <textarea className="textarea" rows="3" placeholder="Engagement details..." value={form.notes} onChange={set('notes')} />
           </div>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving || !form.name || !form.amount}>
-            {saving ? '⏳ Saving...' : bill ? '💾 Update' : '➕ Add Bill'}
+          <button className="btn btn-ghost" onClick={onClose}>ABORT</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving || !form.name || !form.amount} style={{ minWidth: 160 }}>
+            {saving ? 'SYNCING...' : bill ? 'UPDATE ENTRY' : 'COMMENCE BILL'}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
@@ -87,13 +96,13 @@ const PayModal = ({ bill, onClose, onPay, currency }) => {
   const [paying, setPaying] = useState(false);
 
   const handlePay = async () => {
+    if (paying) return;
     setPaying(true);
     try {
       await onPay(bill.id, amount, note);
       onClose();
     } catch (err) {
       console.error(err);
-      // addToast logic is inside payBillFn
     } finally {
       setPaying(false);
     }
@@ -101,35 +110,42 @@ const PayModal = ({ bill, onClose, onPay, currency }) => {
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        className="modal"
+        style={{ maxWidth: 500 }}
+      >
         <div className="modal-header">
-          <h2 className="modal-title">💳 Mark as Paid</h2>
-          <button className="modal-close-btn" onClick={onClose} title="Close">✕</button>
+          <h2 className="modal-title">Authorize Payment</h2>
+          <button className="modal-close-btn" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
-          <div style={{ padding: '16px 20px', background: 'rgba(16,185,129,0.08)', borderRadius: 12, border: '1px solid rgba(16,185,129,0.2)', marginBottom: 8 }}>
-            <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Bill</div>
-            <div style={{ fontWeight: 700, fontSize: 18 }}>{bill.name}</div>
+          <div style={{ padding: '20px', background: 'rgba(var(--primary-rgb), 0.05)', borderRadius: 16, border: '1px solid rgba(var(--primary-rgb), 0.1)', marginBottom: 20 }}>
+            <div style={{ fontSize: 10, color: 'var(--primary)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Active Bill</div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: '#fff' }}>{bill.name}</div>
             {bill.recurrence !== 'one-time' && (
-              <div style={{ fontSize: 13, color: '#6ee7b7', marginTop: 4 }}>🔄 Recurring ({bill.recurrence}) — next bill auto-created</div>
+              <div style={{ fontSize: 12, color: '#10b981', marginTop: 8, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 16 }}>🔄</span> RECURRING: Next period will be auto-indexed.
+              </div>
             )}
           </div>
           <div className="form-group">
-            <label className="form-label">Amount Paid</label>
-            <input className="input" type="number" value={amount} onChange={e => setAmount(parseFloat(e.target.value) || 0)} min="0" step="0.01" />
+            <label className="form-label">Capital Transferred (₹)</label>
+            <input className="input" type="number" value={amount} onChange={e => setAmount(parseFloat(e.target.value) || 0)} />
           </div>
-          <div className="form-group">
-            <label className="form-label">Payment Note (optional)</label>
-            <input className="input" placeholder="e.g. Paid via wire transfer" value={note} onChange={e => setNote(e.target.value)} />
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Audit Note (Optional)</label>
+            <input className="input" placeholder="e.g. Settled via Global Wire" value={note} onChange={e => setNote(e.target.value)} />
           </div>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose} style={{ minWidth: 100 }}>Cancel</button>
-          <button className="btn btn-success" onClick={handlePay} disabled={paying} style={{ flex: 1 }}>
-            {paying ? '⏳ Processing...' : `✅ Confirm Payment ${formatCurrency(amount, currency)}`}
+          <button className="btn btn-ghost" onClick={onClose}>CANCEL</button>
+          <button className="btn btn-primary" onClick={handlePay} disabled={paying} style={{ flex: 1, background: '#10b981', boxShadow: '0 0 20px rgba(16,185,129,0.2)' }}>
+            {paying ? 'PROCESSING...' : `CONFIRM ₹${amount?.toLocaleString()}`}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
@@ -307,20 +323,33 @@ export default function Bills({ initialFilter = 'all' }) {
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20 }}>
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="glass-card" style={{ padding: 24, height: 260 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div style={{ display: 'flex', gap: 12, flex: 1 }}>
+            <div key={i} className="glass-card" style={{ padding: 24, height: 280 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
                   <Skeleton width="44px" height="44px" style={{ borderRadius: 12 }} />
                   <div style={{ flex: 1 }}>
                     <Skeleton width="70%" height="20px" style={{ marginBottom: 6 }} />
                     <Skeleton width="40%" height="14px" />
                   </div>
                 </div>
-                <Skeleton width="60px" height="24px" style={{ borderRadius: 99 }} />
+                <Skeleton width="60px" height="20px" shape="pill" />
               </div>
-              <Skeleton width="100px" height="32px" style={{ marginBottom: 12 }} />
-              <Skeleton width="140px" height="18px" style={{ marginBottom: 20 }} />
-              <Skeleton width="100%" height="40px" style={{ borderRadius: 12 }} />
+              <div style={{ marginBottom: 16 }}>
+                <Skeleton width="120px" height="32px" style={{ marginBottom: 8 }} />
+                <Skeleton width="140px" height="14px" />
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                <Skeleton width="80px" height="22px" style={{ borderRadius: 6 }} />
+                <Skeleton width="80px" height="22px" style={{ borderRadius: 6 }} />
+              </div>
+              <Skeleton width="100%" height="4px" style={{ borderRadius: 99, marginBottom: 20 }} />
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Skeleton width="100%" height="38px" />
+                <div style={{ display: 'flex', gap: 6 }}>
+                   <Skeleton width="38px" height="38px" />
+                   <Skeleton width="38px" height="38px" />
+                </div>
+              </div>
             </div>
           ))}
         </div>

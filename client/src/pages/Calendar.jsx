@@ -58,7 +58,7 @@ function DayPanel({ date, bills, currency, onClose, onMarkPaid, onAddBill }) {
           </div>
           <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 2 }}>{label}</div>
         </div>
-        <button onClick={onClose} style={{ background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, fontFamily: 'inherit' }}>✕</button>
+        <button className="modal-close-btn" onClick={onClose} title="Close">✕</button>
       </div>
 
       {bills.length > 0 && (
@@ -157,7 +157,7 @@ function QuickAddModal({ date, onClose, onAdded }) {
       <div className="modal animate-fade" style={{ maxWidth: 420 }}>
         <div className="modal-header">
           <div className="modal-title">📅 Quick Add Bill</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--text-muted)', padding: 4 }}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} title="Close">✕</button>
         </div>
         <div className="modal-body">
           <div style={{ padding: '8px 12px', background: 'rgba(var(--primary-rgb),0.1)', borderRadius: 8, fontSize: 13, color: 'var(--primary-light)', marginBottom: 4 }}>

@@ -453,8 +453,12 @@ app.get('/api/dashboard', auth, async (c) => {
       (SELECT COUNT(*) FROM bills WHERE user_id = ? AND status = "overdue") as overdueCount,
       (SELECT SUM(amount) FROM payments WHERE user_id = ? AND strftime("%Y-%m", paid_date) = ?) as paidThisMonth,
       (SELECT SUM(amount) FROM income WHERE user_id = ? AND strftime("%Y-%m", received_date) = ?) as incomeThisMonth,
-      (SELECT COUNT(*) FROM bills WHERE user_id = ? AND status = "upcoming") as upcomingCount
-  `).bind(uid, uid, uid, uid, ymNow, uid, ymNow, uid).first();
+      (SELECT SUM(amount) FROM expenses WHERE user_id = ? AND strftime("%Y-%m", date) = ?) as expensesThisMonth,
+      (SELECT COUNT(*) FROM bills WHERE user_id = ? AND status = "upcoming") as upcomingCount,
+      (SELECT COUNT(*) FROM projects WHERE user_id = ? AND status = "active") as activeProjects,
+      (SELECT SUM(duration_seconds) FROM time_entries WHERE user_id = ? AND strftime("%Y-%m", start_time) = ?) as monthSeconds,
+      (SELECT name FROM clients WHERE id = (SELECT client_id FROM income WHERE user_id = ? GROUP BY client_id ORDER BY SUM(amount) DESC LIMIT 1)) as topClient
+  `).bind(uid, uid, uid, uid, ymNow, uid, ymNow, uid, ymNow, uid, uid, uid, ymNow, uid).first();
 
   const recentBills = await c.env.DB.prepare('SELECT * FROM bills WHERE user_id = ? ORDER BY due_date ASC LIMIT 5').bind(uid).all();
   
@@ -463,9 +467,15 @@ app.get('/api/dashboard', auth, async (c) => {
     FROM bills 
     WHERE user_id = ? AND status IN ("upcoming", "overdue") 
     GROUP BY category
-  `).bind(uid).all();
+    `).bind(uid).all();
 
-  // Cashflow (simplified for performance)
+  // Lifecycle expansion for dashboard
+  const recentProjects = await c.env.DB.prepare('SELECT p.*, c.name as client_name FROM projects p LEFT JOIN clients c ON p.client_id = c.id WHERE p.user_id = ? ORDER BY p.created_at DESC LIMIT 5').bind(uid).all();
+  const recentInvoices = await c.env.DB.prepare('SELECT i.*, c.name as client_name FROM invoices i LEFT JOIN clients c ON i.client_id = c.id WHERE i.user_id = ? ORDER BY i.created_at DESC LIMIT 5').bind(uid).all();
+  const recentClients = await c.env.DB.prepare('SELECT * FROM clients WHERE user_id = ? ORDER BY created_at DESC LIMIT 5').bind(uid).all();
+  const recentTime = await c.env.DB.prepare('SELECT t.*, p.name as project_name FROM time_entries t LEFT JOIN projects p ON t.project_id = p.id WHERE t.user_id = ? ORDER BY t.start_time DESC LIMIT 5').bind(uid).all();
+
+  // Cashflow (including real expenses)
   const cashflow = [];
   for (let i = -2; i <= 5; i++) {
     const d = new Date();
@@ -473,27 +483,26 @@ app.get('/api/dashboard', auth, async (c) => {
     const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     const monthLabel = d.toLocaleString('default', { month: 'short', year: '2-digit' });
     
-    const exp = await c.env.DB.prepare('SELECT SUM(amount) as val FROM bills WHERE user_id = ? AND strftime("%Y-%m", due_date) = ?').bind(uid, ym).first();
+    const expBills = await c.env.DB.prepare('SELECT SUM(amount) as val FROM bills WHERE user_id = ? AND strftime("%Y-%m", due_date) = ?').bind(uid, ym).first();
+    const realExp = await c.env.DB.prepare('SELECT SUM(amount) as val FROM expenses WHERE user_id = ? AND strftime("%Y-%m", date) = ?').bind(uid, ym).first();
     const inc = await c.env.DB.prepare('SELECT SUM(amount) as val FROM income WHERE user_id = ? AND strftime("%Y-%m", received_date) = ?').bind(uid, ym).first();
     
     cashflow.push({
       month: monthLabel,
-      income: inc.val || 0,
-      expenses: exp.val || 0,
-      net: (inc.val || 0) - (exp.val || 0)
+      income: inc?.val || 0,
+      expenses: (expBills?.val || 0) + (realExp?.val || 0)
     });
   }
 
-  return c.json({
-    totalDue: stats.totalDue || 0,
-    overdueAmt: stats.overdueAmt || 0,
-    overdueCount: stats.overdueCount || 0,
-    paidThisMonth: stats.paidThisMonth || 0,
-    incomeThisMonth: stats.incomeThisMonth || 0,
-    upcomingCount: stats.upcomingCount || 0,
+  return c.json({ 
+    ...stats, 
+    recentBills: recentBills.results, 
+    byCategory: byCategory.results, 
     cashflow,
-    recentBills: recentBills.results,
-    byCategory: byCategory.results
+    recentProjects: recentProjects.results,
+    recentInvoices: recentInvoices.results,
+    recentClients: recentClients.results,
+    recentTime: recentTime.results
   });
 });
 
@@ -504,6 +513,10 @@ app.post('/api/bills/:id/pay', auth, async (c) => {
   
   const bill = await c.env.DB.prepare('SELECT * FROM bills WHERE id = ? AND user_id = ?').bind(bid, uid).first();
   if (!bill) return c.json({ error: 'Bill not found' }, 404);
+
+  if (bill.status === 'paid') {
+    return c.json({ error: 'This bill has already been marked as paid.' }, 400);
+  }
 
   const amount = body.amount !== undefined ? body.amount : bill.amount;
   const paid_date = body.paid_date || new Date().toISOString().split('T')[0];
@@ -546,7 +559,12 @@ app.post('/api/bills/:id/pay', auth, async (c) => {
       try {
         const nextDate = getNextDate(bill.due_date, bill.recurrence);
         if (nextDate) {
-          await c.env.DB.prepare(`
+          // Idempotency: Check if the next bill already exists
+          const existingNext = await c.env.DB.prepare('SELECT id FROM bills WHERE user_id = ? AND name = ? AND due_date = ?')
+            .bind(uid, bill.name, nextDate).first();
+
+          if (!existingNext) {
+            await c.env.DB.prepare(`
             INSERT INTO bills (user_id, name, category, amount, due_date, recurrence, status, notes, client)
             VALUES (?, ?, ?, ?, ?, ?, 'upcoming', ?, ?)
           `).bind(uid, bill.name, bill.category, bill.amount, nextDate, bill.recurrence, bill.notes, bill.client).run();
@@ -591,12 +609,186 @@ app.delete('/api/income/:id', auth, async (c) => {
   return c.json({ success: true });
 });
 
+app.delete('/api/clients/:id', auth, async (c) => {
+  await c.env.DB.prepare('DELETE FROM clients WHERE id = ? AND user_id = ?').bind(c.req.param('id'), c.get('user').id).run();
+  return c.json({ success: true });
+});
+
+app.delete('/api/projects/:id', auth, async (c) => {
+  await c.env.DB.prepare('DELETE FROM projects WHERE id = ? AND user_id = ?').bind(c.req.param('id'), c.get('user').id).run();
+  return c.json({ success: true });
+});
+
+app.delete('/api/invoices/:id', auth, async (c) => {
+  await c.env.DB.prepare('DELETE FROM invoices WHERE id = ? AND user_id = ?').bind(c.req.param('id'), c.get('user').id).run();
+  return c.json({ success: true });
+});
+
+app.delete('/api/expenses/:id', auth, async (c) => {
+  await c.env.DB.prepare('DELETE FROM expenses WHERE id = ? AND user_id = ?').bind(c.req.param('id'), c.get('user').id).run();
+  return c.json({ success: true });
+});
+
+app.delete('/api/time-entries/:id', auth, async (c) => {
+  await c.env.DB.prepare('DELETE FROM time_entries WHERE id = ? AND user_id = ?').bind(c.req.param('id'), c.get('user').id).run();
+  return c.json({ success: true });
+});
+
 app.delete('/api/auth/data', auth, async (c) => {
   const uid = c.get('user').id;
   await c.env.DB.prepare('DELETE FROM payments WHERE user_id = ?').bind(uid).run();
   await c.env.DB.prepare('DELETE FROM bills WHERE user_id = ?').bind(uid).run();
   await c.env.DB.prepare('DELETE FROM income WHERE user_id = ?').bind(uid).run();
   return c.json({ success: true });
+});
+
+// --- CLIENTS & PROJECTS ---
+
+app.get('/api/clients', auth, async (c) => {
+    const { results } = await c.env.DB.prepare('SELECT * FROM clients WHERE user_id = ? ORDER BY name ASC').bind(c.get('user').id).all();
+    return c.json(results);
+});
+
+app.post('/api/clients', auth, async (c) => {
+    const { name, email, company, notes } = await c.req.json();
+    const res = await c.env.DB.prepare('INSERT INTO clients (user_id, name, email, company, notes) VALUES (?, ?, ?, ?, ?) RETURNING id')
+        .bind(c.get('user').id, name, email, company, notes).first();
+    return c.json({ id: res.id });
+});
+
+app.delete('/api/clients/:id', auth, async (c) => {
+    await c.env.DB.prepare('DELETE FROM clients WHERE id = ? AND user_id = ?')
+        .bind(c.req.param('id'), c.get('user').id).run();
+    return c.json({ success: true });
+});
+
+app.get('/api/projects', auth, async (c) => {
+    const { results } = await c.env.DB.prepare(`
+        SELECT p.*, c.name as client_name 
+        FROM projects p 
+        LEFT JOIN clients c ON p.client_id = c.id 
+        WHERE p.user_id = ? 
+        ORDER BY p.deadline ASC
+    `).bind(c.get('user').id).all();
+    return c.json(results);
+});
+
+app.post('/api/projects', auth, async (c) => {
+    const { client_id, name, budget, deadline, description } = await c.req.json();
+    const res = await c.env.DB.prepare('INSERT INTO projects (user_id, client_id, name, budget, deadline, description) VALUES (?, ?, ?, ?, ?, ?) RETURNING id')
+        .bind(c.get('user').id, client_id, name, budget, deadline, description).first();
+    return c.json({ id: res.id });
+});
+
+app.patch('/api/projects/:id/status', auth, async (c) => {
+    const { status } = await c.req.json();
+    await c.env.DB.prepare('UPDATE projects SET status = ? WHERE id = ? AND user_id = ?')
+        .bind(status, c.req.param('id'), c.get('user').id).run();
+    return c.json({ success: true });
+});
+
+app.delete('/api/projects/:id', auth, async (c) => {
+    await c.env.DB.prepare('DELETE FROM projects WHERE id = ? AND user_id = ?')
+        .bind(c.req.param('id'), c.get('user').id).run();
+    return c.json({ success: true });
+});
+
+// --- TIME TRACKING ---
+
+app.get('/api/time-entries', auth, async (c) => {
+    const { results } = await c.env.DB.prepare(`
+        SELECT t.*, p.name as project_name 
+        FROM time_entries t 
+        LEFT JOIN projects p ON t.project_id = p.id 
+        WHERE t.user_id = ? 
+        ORDER BY t.start_time DESC
+    `).bind(c.get('user').id).all();
+    return c.json(results);
+});
+
+app.post('/api/time-entries/start', auth, async (c) => {
+    const { project_id, note } = await c.req.json();
+    const startTime = new Date().toISOString();
+    const res = await c.env.DB.prepare('INSERT INTO time_entries (user_id, project_id, start_time, is_running, note) VALUES (?, ?, ?, 1, ?) RETURNING id')
+        .bind(c.get('user').id, project_id, startTime, note).first();
+    return c.json({ id: res.id, start_time: startTime });
+});
+
+app.post('/api/time-entries/:id/stop', auth, async (c) => {
+    const id = c.req.param('id');
+    const endTime = new Date().toISOString();
+    
+    const entry = await c.env.DB.prepare('SELECT start_time FROM time_entries WHERE id = ? AND user_id = ?').bind(id, c.get('user').id).first();
+    if (!entry) return c.json({ error: 'Entry not found' }, 404);
+    
+    const duration = Math.floor((new Date(endTime) - new Date(entry.start_time)) / 1000);
+    
+    await c.env.DB.prepare('UPDATE time_entries SET end_time = ?, duration_seconds = ?, is_running = 0 WHERE id = ? AND user_id = ?')
+        .bind(endTime, duration, id, c.get('user').id).run();
+        
+    return c.json({ success: true, duration_seconds: duration });
+});
+
+app.delete('/api/time-entries/:id', auth, async (c) => {
+    await c.env.DB.prepare('DELETE FROM time_entries WHERE id = ? AND user_id = ?')
+        .bind(c.req.param('id'), c.get('user').id).run();
+    return c.json({ success: true });
+});
+
+// --- EXPENSES ---
+
+app.get('/api/expenses', auth, async (c) => {
+    const { results } = await c.env.DB.prepare('SELECT * FROM expenses WHERE user_id = ? ORDER BY date DESC').bind(c.get('user').id).all();
+    return c.json(results);
+});
+
+app.post('/api/expenses', auth, async (c) => {
+    const { category, description, amount, date } = await c.req.json();
+    const res = await c.env.DB.prepare('INSERT INTO expenses (user_id, category, description, amount, date) VALUES (?, ?, ?, ?, ?) RETURNING id')
+        .bind(c.get('user').id, category, description, amount, date).first();
+    return c.json({ id: res.id });
+});
+
+app.delete('/api/expenses/:id', auth, async (c) => {
+    await c.env.DB.prepare('DELETE FROM expenses WHERE id = ? AND user_id = ?')
+        .bind(c.req.param('id'), c.get('user').id).run();
+    return c.json({ success: true });
+});
+
+// --- INVOICES ---
+
+app.get('/api/invoices', auth, async (c) => {
+    const { results } = await c.env.DB.prepare(`
+        SELECT i.*, c.name as client_name, p.name as project_name 
+        FROM invoices i 
+        LEFT JOIN clients c ON i.client_id = c.id 
+        LEFT JOIN projects p ON i.project_id = p.id 
+        WHERE i.user_id = ? 
+        ORDER BY i.created_at DESC
+    `).bind(c.get('user').id).all();
+    return c.json(results);
+});
+
+app.post('/api/invoices', auth, async (c) => {
+    const { project_id, client_id, invoice_number, amount, due_date, items } = await c.req.json();
+    const res = await c.env.DB.prepare(`
+        INSERT INTO invoices (user_id, project_id, client_id, invoice_number, amount, due_date, items) 
+        VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
+    `).bind(c.get('user').id, project_id, client_id, invoice_number, amount, due_date, JSON.stringify(items)).first();
+    return c.json({ id: res.id });
+});
+
+app.patch('/api/invoices/:id/status', auth, async (c) => {
+    const { status } = await c.req.json();
+    await c.env.DB.prepare('UPDATE invoices SET status = ? WHERE id = ? AND user_id = ?')
+        .bind(status, c.req.param('id'), c.get('user').id).run();
+    return c.json({ success: true });
+});
+
+app.delete('/api/invoices/:id', auth, async (c) => {
+    await c.env.DB.prepare('DELETE FROM invoices WHERE id = ? AND user_id = ?')
+        .bind(c.req.param('id'), c.get('user').id).run();
+    return c.json({ success: true });
 });
 
 // --- ADMIN COMMAND CENTER ---

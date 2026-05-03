@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { API, apiHeaders } from '../api/config';
@@ -11,53 +12,63 @@ const IncomeModal = ({ onClose, onSave }) => {
   const [saving, setSaving] = useState(false);
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
   const CATS = ['freelance', 'retainer', 'design', 'development', 'consulting', 'writing', 'other'];
+  
   const handleSave = async () => {
+    if (!form.description || !form.amount) return;
     setSaving(true);
-    await onSave({ ...form, amount: parseFloat(form.amount) });
-    setSaving(false);
+    try {
+      await onSave({ ...form, amount: parseFloat(form.amount) });
+    } finally {
+      setSaving(false);
+    }
   };
+  
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        className="modal"
+      >
         <div className="modal-header">
-          <h2 className="modal-title">💰 Add Income</h2>
-          <button className="btn btn-ghost btn-icon" onClick={onClose} style={{ fontSize: 18 }}>✕</button>
+          <h2 className="modal-title">Log Capital Inflow</h2>
+          <button className="modal-close-btn" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <div className="form-group">
-            <label className="form-label">Description *</label>
-            <input className="input" placeholder="e.g. Website redesign for TechCorp" value={form.description} onChange={set('description')} required />
+            <label className="form-label">Engagement Description</label>
+            <input className="input" placeholder="e.g. Q2 Interface Modernization" value={form.description} onChange={set('description')} required />
           </div>
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">Amount *</label>
-              <input className="input" type="number" placeholder="0.00" min="0" step="0.01" value={form.amount} onChange={set('amount')} />
+              <label className="form-label">Total Revenue (₹)</label>
+              <input className="input" type="number" placeholder="0.00" value={form.amount} onChange={set('amount')} />
             </div>
             <div className="form-group">
-              <label className="form-label">Received Date</label>
+              <label className="form-label">Settlement Date</label>
               <input className="input" type="date" value={form.received_date} onChange={set('received_date')} />
             </div>
           </div>
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">Client</label>
-              <input className="input" placeholder="Client name" value={form.client} onChange={set('client')} />
+              <label className="form-label">Strategic Partner (Client)</label>
+              <input className="input" placeholder="Client entity name" value={form.client} onChange={set('client')} />
             </div>
             <div className="form-group">
-              <label className="form-label">Category</label>
+              <label className="form-label">Revenue Stream</label>
               <select className="select" value={form.category} onChange={set('category')}>
-                {CATS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                {CATS.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
               </select>
             </div>
           </div>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving || !form.description || !form.amount}>
-            {saving ? '⏳...' : '💰 Add Income'}
+          <button className="btn btn-ghost" onClick={onClose}>ABORT</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving || !form.description || !form.amount} style={{ minWidth: 160 }}>
+            {saving ? 'SYNCING...' : 'REGISTER INCOME'}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

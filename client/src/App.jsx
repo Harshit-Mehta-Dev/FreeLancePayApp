@@ -13,6 +13,11 @@ import SecurityDashboard from './pages/SecurityDashboard';
 import Legal from './pages/Legal';
 import Feedback from './pages/Feedback';
 import Bugs from './pages/Bugs';
+import Clients from './pages/Clients';
+import Projects from './pages/Projects';
+import TimeTracker from './pages/TimeTracker';
+import Invoices from './pages/Invoices';
+import Expenses from './pages/Expenses';
 import VirtualInbox from './pages/VirtualInbox';
 import Footer from './components/Footer';
 import Header from './components/Header';
@@ -20,9 +25,13 @@ import axios from 'axios';
 import { API, apiHeaders } from './api/config';
 import { notificationEngine } from './utils/NotificationManager';
 import CookieConsent from './components/CookieConsent';
+import { AuroraBackground } from './components/ui/aurora-background';
 
 // Pages that require authentication
-const AUTH_REQUIRED = ['bills', 'income', 'cashflow', 'payments', 'calendar', 'settings', 'feedback', 'bugs'];
+const AUTH_REQUIRED = [
+  'bills', 'income', 'cashflow', 'payments', 'calendar', 'settings', 'feedback', 'bugs',
+  'clients', 'projects', 'time', 'invoices', 'expenses'
+];
 
 // ─── Audio Engine (Mechanical Switch Sound) ───
 const playClickSound = () => {
@@ -93,11 +102,16 @@ const playClickSound = () => {
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '🏠', public: true },
+  { id: 'clients',   label: 'Clients',   icon: '👥', public: false },
+  { id: 'projects',  label: 'Projects',  icon: '📁', public: false },
+  { id: 'time',      label: 'Time Tracker', icon: '⏱️', public: false },
+  { id: 'invoices',  label: 'Invoices',  icon: '🧾', public: false },
   { id: 'bills',     label: 'Bills',     icon: '💳', public: false },
+  { id: 'expenses',  label: 'Expenses',  icon: '💸', public: false },
   { id: 'calendar',  label: 'Calendar',  icon: '📅', public: false },
   { id: 'income',    label: 'Income',    icon: '💰', public: false },
   { id: 'cashflow',  label: 'Cashflow',  icon: '📊', public: false },
-  { id: 'payments',  label: 'Payment History', icon: '🧾', public: false },
+  { id: 'payments',  label: 'Payment History', icon: '📜', public: false },
   { id: 'feedback',  label: 'Feedback', icon: '💬', public: false },
   { id: 'bugs',      label: 'Bug Reports', icon: '🐛', public: false },
   { id: 'security',  label: 'Security', icon: '🛡️', public: false, adminOnly: true },
@@ -109,7 +123,7 @@ const AuthGateBanner = ({ pageName, onLogin, onRegister }) => (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{ textAlign: 'center', maxWidth: 440 }}>
         {/* Glow orb */}
-        <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, margin: '0 auto 24px', boxShadow: '0 0 60px rgba(var(--primary-rgb),0.35)', animation: 'float 3s ease-in-out infinite' }}>
+        <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, margin: '0 auto 24px', boxShadow: '0 0 60px rgba(var(--primary-rgb),0.35)', animation: 'float 3s ease-in-out infinite' }}>
           🔐
         </div>
         <h2 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 26, fontWeight: 800, marginBottom: 12 }}>
@@ -158,7 +172,13 @@ function Sidebar({ page, setPage, user, logout, open, setOpen, onLogin, onRegist
   };
   void handleNav; // Keep for future use if needed, but resolve lint
   return (
-    <aside className={`sidebar ${open ? 'open' : ''}`}>
+    <aside className={`sidebar ${open ? 'open' : ''}`} style={{
+      background: 'var(--bg-glass)',
+      borderRight: '1px solid var(--glass-border)',
+      boxShadow: 'none', /* Elevation through lightness */
+      backdropFilter: 'blur(40px) saturate(200%)',
+      WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+    }}>
       <div className="sidebar-logo" onClick={onRefresh}>
         <div className="sidebar-logo-icon" style={{ fontSize: 18 }}>💸</div>
         <div>
@@ -194,11 +214,13 @@ function Sidebar({ page, setPage, user, logout, open, setOpen, onLogin, onRegist
           <div style={{ marginBottom: 8 }}>
             <button
               onClick={toggleTheme}
+              className="glass-card"
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)',
                 background: 'var(--glass)', border: '1px solid var(--glass-border)',
-                cursor: 'pointer', transition: 'all 0.2s'
+                cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}
               title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
@@ -237,11 +259,13 @@ function Sidebar({ page, setPage, user, logout, open, setOpen, onLogin, onRegist
               setSoundEnabled(newVal);
               localStorage.setItem('click_sound', newVal);
             }}
+            className="glass-card"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)',
               background: 'var(--glass)', border: '1px solid var(--glass-border)',
-              cursor: 'pointer', opacity: soundEnabled ? 1 : 0.6
+              cursor: 'pointer', opacity: soundEnabled ? 1 : 0.7,
+              transition: 'all 0.3s ease'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -265,7 +289,7 @@ function Sidebar({ page, setPage, user, logout, open, setOpen, onLogin, onRegist
         {user ? (
           <div style={{ padding: '14px', marginTop: 8, background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, flexShrink: 0, overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, flexShrink: 0, overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)' }}>
                 {user.avatar?.startsWith('data:image') || user.avatar?.startsWith('http') ? (
                   <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" />
                 ) : (
@@ -274,9 +298,9 @@ function Sidebar({ page, setPage, user, logout, open, setOpen, onLogin, onRegist
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fff' }}>{user.name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{user.name}</div>
                   {user.email === 'harshitmehta1012@gmail.com' && (
-                    <span style={{ fontSize: 8, padding: '1px 5px', background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)', color: 'white', borderRadius: 4, fontWeight: 900, flexShrink: 0, letterSpacing: '0.5px' }}>SENIOR ADMIN</span>
+                    <span style={{ fontSize: 8, padding: '1px 5px', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', color: 'white', borderRadius: 4, fontWeight: 900, flexShrink: 0, letterSpacing: '0.5px' }}>SENIOR ADMIN</span>
                   )}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
@@ -291,7 +315,7 @@ function Sidebar({ page, setPage, user, logout, open, setOpen, onLogin, onRegist
                   logout();
                 }
               }} 
-              className="btn-logout-cyber"
+              className="btn-logout-premium"
               style={{ width: '100%', padding: '10px' }}
               title="Secure Logout"
             >
@@ -327,15 +351,28 @@ function Sidebar({ page, setPage, user, logout, open, setOpen, onLogin, onRegist
 
 function MobileHeader({ setOpen }) {
   return (
-    <div className="mobile-header" style={{ position: 'sticky', top: 0, zIndex: 1000, padding: '12px 16px', background: 'rgba(8,12,20,0.95)', borderBottom: '1px solid rgba(var(--primary-rgb), 0.2)', backdropFilter: 'blur(20px)', alignItems: 'center', justifyContent: 'space-between' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: 18, color: '#fff' }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--gradient-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 0 15px rgba(var(--primary-rgb), 0.3)' }}>💸</div>
-        <span style={{ letterSpacing: -0.5 }}>FreeLancePay</span>
+    <div className="mobile-header glass-card" style={{ 
+      position: 'sticky', 
+      top: 0, 
+      zIndex: 'var(--z-header)', 
+      padding: '12px 16px', 
+      background: 'var(--bg-glass)', 
+      borderBottom: '1px solid var(--glass-border)', 
+      backdropFilter: 'blur(20px) saturate(180%)', 
+      WebkitBackdropFilter: 'blur(20px) saturate(180%)', 
+      alignItems: 'center', 
+      justifyContent: 'space-between',
+      borderRadius: 0,
+      boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: 18 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--gradient-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 0 15px rgba(var(--primary-rgb), 0.3)', color: 'white' }}>💸</div>
+        <span style={{ letterSpacing: -0.5, color: 'var(--text-primary)' }}>FreeLancePay</span>
       </div>
       <button 
         onClick={() => setOpen(o => !o)} 
-        className="btn-icon"
-        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: 20, width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        className="btn-icon glass-card"
+        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)', fontSize: 20, width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
         ☰
       </button>
@@ -370,14 +407,14 @@ const MaintenanceOverlay = () => {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-      background: 'rgba(3, 7, 18, 0.98)', zIndex: 999999, display: 'flex',
+      background: 'var(--bg-primary)', zIndex: 999999, display: 'flex',
       flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      backdropFilter: 'blur(30px)', color: 'white', textAlign: 'center', padding: 20
+      backdropFilter: 'blur(30px)', color: 'var(--text-primary)', textAlign: 'center', padding: 20
     }}>
       <div className="maintenance-container" style={{
-        padding: '50px 60px', background: 'rgba(255,255,255,0.03)',
-        borderRadius: 40, border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 0 100px rgba(168, 85, 247, 0.1)',
+        padding: '50px 60px', background: 'var(--bg-glass)',
+        borderRadius: 40, border: '1px solid var(--glass-border)',
+        boxShadow: 'var(--glass-shadow)',
         transition: 'all 0.5s ease',
         cursor: 'default'
       }}>
@@ -391,11 +428,11 @@ const MaintenanceOverlay = () => {
             </svg>
           </div>
         </div>
-        <h1 style={{ fontFamily: 'Space Grotesk', fontSize: '2.4rem', fontWeight: 900, background: 'linear-gradient(to right, #fff, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: -1 }}>
-          Cyber-Cloud is Dreaming
+        <h1 style={{ fontFamily: 'Space Grotesk', fontSize: '2.4rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: -1 }}>
+          System Maintenance
         </h1>
         <p style={{ 
-          color: 'rgba(255,255,255,0.7)', maxWidth: 420, fontSize: '1.2rem', marginTop: 25, 
+          color: 'var(--text-secondary)', maxWidth: 420, fontSize: '1.2rem', marginTop: 25, 
           transition: 'all 0.8s ease', opacity: fade ? 1 : 0, transform: fade ? 'translateY(0)' : 'translateY(10px)',
           minHeight: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 500
         }}>
@@ -419,6 +456,7 @@ export default function App() {
   const { user, loading, isBanned, logout } = useAuth();
   const { colorThemeId } = useTheme();
   const [page, setPage] = useState('dashboard');
+  const [pageData, setPageData] = useState(null);
   const [billFilter, setBillFilter] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authMode, setAuthMode] = useState(null); // null | 'login' | 'register'
@@ -499,26 +537,32 @@ export default function App() {
       }
       lastScrollY.current = scrollY;
 
-      // Move background blobs slightly
+      // Parallax Background
       const bg = document.querySelector('.parallax-bg');
       if (bg) {
-        bg.style.transform = `translateY(${scrollY * 0.1}px) rotate(${scrollY * 0.02}deg)`;
+        bg.style.transform = `translateY(${scrollY * 0.1}px)`;
       }
+    };
 
-      // Slightly shift the main content for depth
-      const content = document.querySelector('.main-content');
-      if (content) {
-        content.style.transform = `translateY(${scrollY * -0.02}px)`;
+    const handleMouseMove = (e) => {
+      const { clientX, clientY } = e;
+      const xPos = (clientX / window.innerWidth - 0.5) * 30;
+      const yPos = (clientY / window.innerHeight - 0.5) * 30;
+      
+      const bg = document.querySelector('.parallax-bg');
+      if (bg) {
+        bg.style.backgroundPosition = `${50 + xPos * 0.2}% ${50 + yPos * 0.2}%`;
       }
+    };
+
+    const handleMouseLeave = () => {
+      // Logic removed as per user request
     };
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           entry.target.classList.add('active');
-        } else {
-          // Keep it interactive by removing active when out of view (optional)
-          // entry.target.classList.remove('active'); 
         }
       });
     }, { threshold: 0.05 });
@@ -535,10 +579,14 @@ export default function App() {
     };
 
     window.addEventListener('scroll', handleScroll);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseleave', handleMouseLeave);
     window.addEventListener('mousedown', handleGlobalClick);
+    
     return () => {
       elements.forEach(el => observer.unobserve(el));
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mousedown', handleGlobalClick);
     };
   }, [page, user, isRefreshing]);
@@ -664,35 +712,50 @@ export default function App() {
         onRegister={() => setAuthMode('register')}
       />;
     }
-    const PAGES = { 
-      bills: () => <Bills setPage={setPage} initialFilter={billFilter} />, 
-      income: Income, 
-      cashflow: Cashflow, 
-      payments: Payments, 
-      calendar: Calendar, 
-      settings: Settings, 
-      legal: Legal, 
-      feedback: Feedback, 
-      security: SecurityDashboard, 
-      bugs: Bugs, 
-      'verification-help': VirtualInbox 
+    const pageMap = {
+      dashboard: () => (
+        <Dashboard
+          onLogin={() => setAuthMode('login')}
+          onRegister={() => setAuthMode('register')}
+          setPage={setPage}
+          setBillFilter={setBillFilter}
+          showWelcome={showWelcome}
+          onWelcomeClose={() => setShowWelcome(false)}
+        />
+      ),
+      clients:   () => <Clients setPage={setPage} setPageData={setPageData} />,
+      projects:  () => <Projects clientId={pageData?.clientId} />,
+      time:      () => <TimeTracker />,
+      invoices:  () => <Invoices clientId={pageData?.clientId} projectId={pageData?.projectId} />,
+      expenses:  () => <Expenses />,
+      bills:     () => <Bills initialFilter={billFilter} />,
+      income:    () => <Income />,
+      cashflow:  () => <Cashflow />,
+      payments:  () => <Payments />,
+      calendar:  () => <Calendar />,
+      settings:  () => <Settings />,
+      legal:     () => <Legal />,
+      feedback:  () => <Feedback />,
+      security:  () => <SecurityDashboard />,
+      bugs:      () => <Bugs />,
+      'verification-help': () => <VirtualInbox />
     };
-    const Comp = PAGES[page];
-    
-    // Admin Guard for pages
+
+    const RenderComp = pageMap[page] || pageMap.dashboard;
+
+    // Admin Guard
     if (NAV.find(n => n.id === page)?.adminOnly && user?.role !== 'admin') {
-      return <Dashboard onLogin={() => setAuthMode('login')} onRegister={() => setAuthMode('register')} setPage={setPage} setBillFilter={setBillFilter} />;
+      return pageMap.dashboard();
     }
-    
-    if (page === 'bills') return <Bills setPage={setPage} initialFilter={billFilter} />;
-    
-    return Comp ? (typeof Comp === 'function' && Comp.prototype?.render ? <Comp setPage={setPage} /> : (typeof Comp === 'function' ? React.createElement(Comp, { setPage }) : <Comp setPage={setPage} />)) : <Dashboard onLogin={() => setAuthMode('login')} onRegister={() => setAuthMode('register')} setPage={setPage} setBillFilter={setBillFilter} />;
+
+    return RenderComp();
   };
 
   const isCyber = colorThemeId === 'cyber';
 
   return (
     <div className={`layout ${isCyber ? 'cyber-layout' : ''}`}>
+      <AuroraBackground />
       {isCyber && (
         <>
           <div className="hud-corner hud-tl" style={{ position: 'fixed', zIndex: 10000, opacity: 0.8 }}></div>
@@ -701,7 +764,6 @@ export default function App() {
           <div className="hud-corner hud-br" style={{ position: 'fixed', zIndex: 10000, opacity: 0.8 }}></div>
         </>
       )}
-      <div className="parallax-bg"></div>
       <Sidebar
         page={page} setPage={setPage}
         user={user} logout={logout}
@@ -737,9 +799,9 @@ export default function App() {
           .mobile-header { display: flex !important; }
         }
 
-        .btn-logout-cyber {
-          background: rgba(239, 68, 68, 0.08);
-          border: 1px solid rgba(239, 68, 68, 0.3);
+        .btn-logout-premium {
+          background: rgba(var(--primary-rgb), 0.08);
+          border: 1px solid rgba(var(--primary-rgb), 0.3);
           border-radius: 12px;
           cursor: pointer;
           padding: 12px;
@@ -752,19 +814,18 @@ export default function App() {
           margin-top: 10px;
         }
 
-        .btn-logout-cyber:hover {
-          background: rgba(239, 68, 68, 0.2);
-          border-color: #ef4444;
-          box-shadow: 0 0 25px rgba(239, 68, 68, 0.4), inset 0 0 10px rgba(239, 68, 68, 0.1);
+        .btn-logout-premium:hover {
+          background: rgba(var(--primary-rgb), 0.2);
+          border-color: var(--primary);
+          box-shadow: 0 0 25px rgba(var(--primary-rgb), 0.4), inset 0 0 10px rgba(var(--primary-rgb), 0.1);
           transform: translateY(-2px);
         }
 
-        .btn-logout-cyber:hover .logout-label {
-          color: #fff;
-          text-shadow: 0 0 8px #ef4444;
+        .btn-logout-premium:hover .logout-label {
+          color: var(--text-primary);
         }
 
-        .btn-logout-cyber::before {
+        .btn-logout-premium::before {
           content: '';
           position: absolute;
           top: 0; left: -100%;

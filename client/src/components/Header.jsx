@@ -32,7 +32,6 @@ export default function Header({ pageLabel, isHidden, setPage }) {
   const { user } = useAuth();
   const [uptime, setUptime] = useState('00:00:00');
   const [isLocked, setIsLocked] = useState(false);
-  const headerRef = useRef(null);
   const [packets, setPackets] = useState([]);
 
   // Lock Animation on mount
@@ -73,52 +72,57 @@ export default function Header({ pageLabel, isHidden, setPage }) {
     return () => clearInterval(itv);
   }, []);
 
-  // Mouse Grid Glow
-  const handleMouseMove = (e) => {
-    if (!headerRef.current) return;
-    const rect = headerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    headerRef.current.style.setProperty('--mouse-x', `${x}px`);
-    headerRef.current.style.setProperty('--mouse-y', `${y}px`);
-  };
-
   return (
     <header 
-      ref={headerRef}
-      onMouseMove={handleMouseMove}
-      className={`main-header header-desktop ${isHidden ? 'header-hidden' : ''}`}
+      className={`main-header header-desktop glass-card ${isHidden ? 'header-hidden' : ''}`}
       style={{
         position: 'sticky',
         top: 15,
-        zIndex: 80,
+        zIndex: 900,
         margin: '0 24px 20px',
         padding: '16px 28px',
-        background: 'rgba(8, 12, 20, 0.9)',
-        backdropFilter: 'blur(16px)',
+        background: 'var(--bg-glass)',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         border: '1px solid var(--glass-border)',
-        borderTop: '1px solid rgba(var(--primary-rgb), 0.4)',
-        borderRadius: 4,
+        borderTop: '1px solid rgba(var(--primary-rgb), 0.3)',
+        borderRadius: 'var(--radius-sm)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: 'inset 0 0 20px rgba(var(--primary-rgb), 0.05), 0 10px 40px rgba(0,0,0,0.5)',
+        boxShadow: 'var(--shadow-glass), var(--glass-inner-glow)',
+        overflow: 'visible'
       }}
     >
       {/* Background Visual Layer (Isolated for overflow:hidden) */}
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: 'inherit' }}>
-        <div className="header-grid-bg"></div>
-        <div className="header-scanning-line"></div>
+        <div className="header-scanning-line" style={{
+          position: 'absolute', top: 0, left: 0, width: '100%', height: '1px',
+          background: 'linear-gradient(to right, transparent, var(--primary), transparent)',
+          opacity: 0.2, animation: 'header-scan 8s linear infinite'
+        }}></div>
         
         {/* Data Stream */}
         {packets.map(p => (
           <div key={p.id} className="data-packet" style={{
+            position: 'absolute', right: '-100px',
             top: `${p.top}%`,
+            fontFamily: 'monospace', fontSize: '9px',
+            color: 'var(--primary)', opacity: 0.3,
+            whiteSpace: 'nowrap', pointerEvents: 'none',
             animation: 'data-zip 4s linear forwards'
           }}>
             {p.content}
           </div>
         ))}
+
+        {/* Subtle Decorative Hex Fragments */}
+        <div style={{ position: 'absolute', bottom: 6, left: '20%', fontSize: '8px', fontFamily: 'monospace', color: 'var(--text-muted)', opacity: 0.2, letterSpacing: '2px' }}>
+          SEC_TOKEN: {Math.random().toString(16).slice(2, 10).toUpperCase()}
+        </div>
+        <div style={{ position: 'absolute', bottom: 6, right: '20%', fontSize: '8px', fontFamily: 'monospace', color: 'var(--text-muted)', opacity: 0.2, letterSpacing: '2px' }}>
+          NODE_ID: {Math.random().toString(16).slice(2, 6).toUpperCase()}
+        </div>
       </div>
 
       <div className="hud-corner hud-tl"></div>
@@ -127,31 +131,60 @@ export default function Header({ pageLabel, isHidden, setPage }) {
       <div className="hud-corner hud-br"></div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 18, position: 'relative', zIndex: 2 }}>
-        <div className="header-status-dot"></div>
+        <div className="header-status-dot-wrap">
+          <div className="header-status-dot"></div>
+          <div className="header-status-dot-pulse"></div>
+        </div>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, textTransform: 'uppercase', letterSpacing: '1px', color: '#fff' }}>{pageLabel}</h2>
-            <span className="header-metadata">SYS_ID: 004-X</span>
+            <h2 style={{ 
+              fontSize: 22, fontWeight: 900, margin: 0, 
+              textTransform: 'uppercase', letterSpacing: '-0.5px', 
+              color: 'var(--text-primary)', fontFamily: 'var(--font-display)',
+              textShadow: '0 0 20px rgba(var(--primary-rgb), 0.2)'
+            }}>
+              {pageLabel}
+            </h2>
           </div>
-          <div className="ticker-content" style={{ marginTop: 4 }}>
-            <span style={{ color: 'var(--primary-light)', fontWeight: 700 }}>ACTIVE</span>
-            <span style={{ margin: '0 8px', opacity: 0.3 }}>•</span>
-            <span style={{ fontSize: 11, letterSpacing: '0.5px', fontFamily: 'JetBrains Mono' }}>
-              {user ? `ESTABLISHED // USER: ${user.name.toUpperCase()}` : 'ASYNC_GUEST_LINK // ON'}
+          <div className="ticker-content" style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ 
+              color: 'var(--primary)', fontWeight: 800, fontSize: '10px', 
+              letterSpacing: '1px', textTransform: 'uppercase',
+              background: 'rgba(var(--primary-rgb), 0.1)',
+              padding: '2px 6px', borderRadius: '4px'
+            }}>
+              ACTIVE
+            </span>
+            <span style={{ fontSize: 10, letterSpacing: '0.5px', fontFamily: 'JetBrains Mono', color: 'var(--text-secondary)', opacity: 0.7 }}>
+              {user ? `// AUTH: ${user.name.toUpperCase()}` : '// GUEST_LINK_ANON'}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Center Search Hub */}
-      <div style={{ position: 'relative', zIndex: 5 }}>
+      {/* Center Search Hub - Perfectly Centered */}
+      <div style={{ 
+        position: 'absolute', 
+        left: '50%', 
+        transform: 'translateX(-50%)',
+        zIndex: 10,
+        display: 'flex',
+        justifyContent: 'center',
+        width: 'auto'
+      }}>
         <GlobalSearch setPage={setPage} userRole={user?.role} />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 24, position: 'relative', zIndex: 2 }}>
-        <div style={{ textAlign: 'right' }}>
-          <div className="header-metadata">UPTIME: {uptime}</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>
+        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <div className="header-uptime-tag" style={{ 
+            fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', 
+            letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: 6 
+          }}>
+            <span className="uptime-pulse"></span>
+            UPTIME: {uptime}
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)', marginTop: 2, fontFamily: 'var(--font-display)' }}>
             {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}
           </div>
         </div>
@@ -159,47 +192,81 @@ export default function Header({ pageLabel, isHidden, setPage }) {
         <NotificationBell />
 
         {user && (
-          <div style={{ 
-            width: 38, height: 38, borderRadius: '50%', 
-            background: 'linear-gradient(135deg, var(--primary), #06b6d4)', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', 
-            fontSize: 16, fontWeight: 700, flexShrink: 0, overflow: 'hidden',
-            border: '2px solid rgba(var(--primary-rgb), 0.3)',
-            boxShadow: '0 0 15px rgba(var(--primary-rgb), 0.2)',
-            cursor: 'pointer'
-          }}>
-            {user.avatar?.startsWith('data:image') || user.avatar?.startsWith('http') ? (
-              <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" />
-            ) : (
-              user.avatar || user.name?.[0]?.toUpperCase()
-            )}
+          <div 
+            className="header-avatar-wrap"
+            onClick={() => setPage('settings')}
+            style={{ 
+              width: 42, height: 42, borderRadius: '50%', 
+              background: 'linear-gradient(135deg, var(--primary), var(--secondary))', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              padding: '2px', flexShrink: 0,
+              boxShadow: '0 0 20px rgba(var(--primary-rgb), 0.2)',
+              cursor: 'pointer', transition: 'transform 0.3s ease'
+            }}
+          >
+            <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              {user.avatar?.startsWith('data:image') || user.avatar?.startsWith('http') ? (
+                <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" />
+              ) : (
+                <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--primary)' }}>{user.name?.[0]?.toUpperCase()}</span>
+              )}
+            </div>
           </div>
         )}
 
-        <div className="btn-cyber-status" style={{ 
+        <div className="live-status-pill" style={{ 
           display: 'flex', alignItems: 'center', gap: 10, 
-          background: 'rgba(var(--primary-rgb), 0.15)', 
-          padding: '8px 16px', 
-          borderRadius: 2, 
-          border: '1px solid rgba(var(--primary-rgb), 0.3)',
-          cursor: 'crosshair',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          background: 'rgba(var(--primary-rgb), 0.1)', 
+          padding: '6px 14px', 
+          borderRadius: '99px', 
+          border: '1px solid rgba(var(--primary-rgb), 0.2)',
+          cursor: 'default',
+          position: 'relative'
         }}>
-          <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--primary)', letterSpacing: '2px' }}>LIVE</span>
-          <div className="pulse-mini"></div>
+          <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--primary)', letterSpacing: '1px' }}>LIVE</span>
+          <div className="pulse-dot"></div>
         </div>
       </div>
 
       <style>{`
-        .btn-cyber-status:hover {
-          background: rgba(var(--primary-rgb), 0.25);
-          border-color: var(--primary);
-          box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.4);
-          transform: translateY(-1px);
+        @keyframes header-scan {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(60px); }
+          100% { transform: translateY(0); }
         }
-        .btn-cyber-status:hover .pulse-mini {
-          animation-duration: 0.5s;
+        @keyframes data-zip {
+          from { right: -100px; transform: scaleX(1.5); }
+          to { right: 110%; transform: scaleX(1); }
         }
+        .header-status-dot-wrap { position: relative; width: 10px; height: 10px; }
+        .header-status-dot { 
+          width: 8px; height: 8px; border-radius: 50%; 
+          background: var(--primary); box-shadow: 0 0 10px var(--primary); 
+        }
+        .header-status-dot-pulse {
+          position: absolute; inset: -4px; border-radius: 50%;
+          border: 1px solid var(--primary); opacity: 0;
+          animation: dot-pulse 2s infinite;
+        }
+        @keyframes dot-pulse {
+          0% { transform: scale(1); opacity: 0.5; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+        .uptime-pulse {
+          width: 4px; height: 4px; border-radius: 50%;
+          background: var(--accent-emerald); animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .header-avatar-wrap:hover { transform: scale(1.1) rotate(5deg); }
+        .pulse-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: var(--primary); animation: pulse-glow-small 1.5s infinite;
+        }
+        @keyframes pulse-glow-small {
+          0%, 100% { box-shadow: 0 0 4px var(--primary); }
+          50% { box-shadow: 0 0 12px var(--primary); transform: scale(1.2); }
+        }
+        .live-status-pill:hover { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.2); }
       `}</style>
     </header>
   );

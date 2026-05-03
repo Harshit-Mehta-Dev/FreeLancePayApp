@@ -1,9 +1,14 @@
 name = "freelance-pay-api"
 main = "worker.js"
 compatibility_date = "2024-04-27"
+compatibility_flags = ["nodejs_compat"]
 
 [vars]
 NODE_ENV = "production"
+# AUTH_ORIGIN = "https://freelance-pay-cloud.pages.dev"
+
+[observability]
+enabled = true
 
 [[d1_databases]]
 binding = "DB"

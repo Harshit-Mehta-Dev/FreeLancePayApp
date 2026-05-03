@@ -42,7 +42,7 @@ const schemas = {
     amount: Joi.number().min(0).required(),
     due_date: Joi.date().iso().required(),
     category: Joi.string().optional(),
-    recurrence: Joi.string().valid('one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'yearly').optional(),
+    recurrence: Joi.string().valid('one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'yearly').default('one-time'),
     notes: Joi.string().allow('', null).optional(),
     client: Joi.string().allow('', null).optional()
   })
@@ -1116,6 +1116,10 @@ app.post('/api/bills/:id/pay', auth, async (req, res) => {
   const bill = await db('bills').where({ id: req.params.id, user_id: req.user.id }).first();
   if (!bill) return res.status(404).json({ error: 'Bill not found' });
   
+  if (bill.status === 'paid') {
+    return res.status(400).json({ error: 'This bill has already been marked as paid.' });
+  }
+  
   await db('payments').insert({
     bill_id: req.params.id,
     user_id: req.user.id,
@@ -1130,7 +1134,15 @@ app.post('/api/bills/:id/pay', auth, async (req, res) => {
   if (bill.recurrence !== 'one-time') {
     const nextDate = getNextDate(bill.due_date, bill.recurrence);
     if (nextDate) {
-      await db('bills').insert({
+      // Idempotency: Check if the next bill already exists (to prevent duplicates on double-clicks)
+      const existingNext = await db('bills').where({
+        user_id: bill.user_id,
+        name: bill.name,
+        due_date: nextDate
+      }).first();
+
+      if (!existingNext) {
+        await db('bills').insert({
         user_id: bill.user_id,
         name: bill.name,
         category: bill.category,

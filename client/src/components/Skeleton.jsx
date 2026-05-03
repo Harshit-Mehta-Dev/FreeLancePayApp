@@ -1,19 +1,20 @@
 import React from 'react';
 
-const Skeleton = ({ width, height, shape = 'rectangle', className = '', style = {} }) => {
+const Skeleton = ({ width, height, shape = 'rectangle', className = '', style = {}, variant = 'glass' }) => {
   const inlineStyle = {
     width: width || '100%',
     height: height || '20px',
-    borderRadius: shape === 'circle' ? '50%' : 'var(--radius-sm)',
+    borderRadius: shape === 'circle' ? '50%' : (shape === 'pill' ? '99px' : 'var(--radius-sm)'),
     ...style
   };
 
   return (
     <div 
-      className={`skeleton ${className}`} 
+      className={`skeleton skeleton-${variant} ${className}`} 
       style={inlineStyle} 
     />
   );
 };
 
 export default Skeleton;
+
