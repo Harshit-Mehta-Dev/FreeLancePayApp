@@ -8,6 +8,7 @@ import { formatCurrency, formatDate, daysUntil } from '../utils/helpers';
 import { ChevronRight, CreditCard, PieChart as PieIcon, Activity, Calendar as CalIcon, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle, FileText } from 'lucide-react';
 import axios from 'axios';
 import { API, apiHeaders } from '../api/config';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
@@ -27,22 +28,74 @@ const getCategoryMeta = (cat) => {
   return meta[cat.toLowerCase()] || { icon: '📄', label: cat };
 };
 
+// ─── Feature Slider ───────────────────────────────────────────────────────────
+const FeatureSlider = () => {
+  const [index, setIndex] = useState(0);
+  const slides = [
+    { title: "Smart Bill Tracking", desc: "Automate your recurring payments with precision.", icon: "💳", bg: "rgba(99, 102, 241, 0.1)" },
+    { title: "Cashflow Forecast", desc: "Predict your financial future with AI-driven charts.", icon: "📈", bg: "rgba(16, 185, 129, 0.1)" },
+    { title: "Client Management", desc: "Keep track of all your clients in one secure place.", icon: "🤝", bg: "rgba(245, 158, 11, 0.1)" },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % slides.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  return (
+    <div className="glass-card" style={{ 
+      position: 'relative', height: 280, borderRadius: 32, overflow: 'hidden', 
+      marginBottom: 60, display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.5 }}
+          style={{ 
+            textAlign: 'center', padding: 40, width: '100%', height: '100%',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            background: slides[index].bg
+          }}
+        >
+          <div style={{ fontSize: 56, marginBottom: 20 }}>{slides[index].icon}</div>
+          <h2 style={{ fontSize: 32, fontWeight: 900, marginBottom: 12, color: 'var(--text-primary)' }}>{slides[index].title}</h2>
+          <p style={{ fontSize: 18, color: 'var(--text-secondary)', maxWidth: 500 }}>{slides[index].desc}</p>
+        </motion.div>
+      </AnimatePresence>
+      <div style={{ position: 'absolute', bottom: 20, display: 'flex', gap: 8 }}>
+        {slides.map((_, i) => (
+          <div key={i} onClick={() => setIndex(i)} style={{ 
+            width: index === i ? 24 : 8, height: 8, borderRadius: 4, 
+            background: index === i ? 'var(--primary)' : 'rgba(255,255,255,0.2)',
+            transition: 'all 0.3s ease', cursor: 'pointer'
+          }} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── Guest Dashboard ──────────────────────────────────────────────────────────
 const GuestDashboard = ({ onLogin, onRegister }) => {
   return (
-    <div className="page animate-fade" style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 20px' }}>
+    <div className="page animate-fade" style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
       <div style={{ textAlign: 'center', marginBottom: 60 }}>
         <div style={{ display: 'inline-block', padding: '8px 16px', background: 'rgba(var(--primary-rgb),0.1)', color: 'var(--primary)', borderRadius: 20, fontSize: 13, fontWeight: 700, marginBottom: 20, border: '1px solid rgba(var(--primary-rgb),0.2)' }}>
-          ALPHA VERSION 1.2
+          VERSION 3.0 STABLE
         </div>
         <h1 style={{ fontSize: 'clamp(2.5rem, 8vw, 4rem)', fontWeight: 900, marginBottom: 20, letterSpacing: -1.5, lineHeight: 1.1, color: 'var(--text-primary)' }}>
-          The Smart Way to <br/><span style={{ background: 'linear-gradient(to right, var(--primary), #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' }}>Manage Freelance Finances</span>
+          Professional Freelance <br/><span style={{ background: 'linear-gradient(to right, var(--primary), #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' }}>Financial Management</span>
         </h1>
         <p style={{ fontSize: 18, color: 'var(--text-secondary)', maxWidth: 600, margin: '0 auto 40px', lineHeight: 1.6 }}>
-          Track bills, log income, and project your cashflow with a dashboard designed for modern freelancers.
+          The complete platform for tracking bills, logging income, and managing your client portfolio with precision.
         </p>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-          <button className="btn btn-primary" onClick={onRegister} style={{ padding: '14px 32px', fontSize: 16 }}>🚀 Get Started Now</button>
+          <button className="btn btn-primary" onClick={onRegister} style={{ padding: '14px 32px', fontSize: 16 }}>🚀 Get Started</button>
           <button className="btn btn-ghost" onClick={onLogin} style={{ padding: '14px 32px', fontSize: 16 }}>🔐 Sign In</button>
         </div>
       </div>
@@ -159,7 +212,7 @@ const StatCard = ({ icon, label, value, sub, gradient, currency }) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <div>
         <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 8 }}>{label}</div>
-        <div style={{ fontSize: 26, fontWeight: 800, fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-primary)' }}>
+        <div className="glow-text" style={{ fontSize: 26, fontWeight: 800, fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-primary)' }}>
           {typeof value === 'number' ? formatCurrency(value, currency) : value}
         </div>
         {sub && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{sub}</div>}

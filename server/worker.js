@@ -565,13 +565,13 @@ app.post('/api/bills/:id/pay', auth, async (c) => {
 
           if (!existingNext) {
             await c.env.DB.prepare(`
-            INSERT INTO bills (user_id, name, category, amount, due_date, recurrence, status, notes, client)
-            VALUES (?, ?, ?, ?, ?, ?, 'upcoming', ?, ?)
-          `).bind(uid, bill.name, bill.category, bill.amount, nextDate, bill.recurrence, bill.notes, bill.client).run();
+              INSERT INTO bills (user_id, name, category, amount, due_date, recurrence, status, notes, client)
+              VALUES (?, ?, ?, ?, ?, ?, 'upcoming', ?, ?)
+            `).bind(uid, bill.name, bill.category, bill.amount, nextDate, bill.recurrence, bill.notes, bill.client).run();
+          }
         }
       } catch (recurErr) {
         console.error('Failed to create recurring bill:', recurErr);
-        // Don't fail the whole payment if just the next bill creation fails
       }
     }
 

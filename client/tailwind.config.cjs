@@ -23,6 +23,7 @@ module.exports = {
       },
       animation: {
         aurora: "aurora 60s linear infinite",
+        shine: "shine var(--duration) infinite linear",
       },
       keyframes: {
         aurora: {
@@ -31,6 +32,17 @@ module.exports = {
           },
           to: {
             backgroundPosition: "350% 50%, 350% 50%",
+          },
+        },
+        shine: {
+          "0%": {
+            "background-position": "0% 0%",
+          },
+          "50%": {
+            "background-position": "100% 100%",
+          },
+          "100%": {
+            "background-position": "0% 0%",
           },
         },
       },

@@ -3,7 +3,7 @@ pages_build_output_dir = "dist"
 compatibility_date = "2024-04-27"
 
 [vars]
-VITE_API_URL = "https://freelance-pay-api.harshitmehta1012.workers.dev"
+VITE_API_URL = "https://freelance-pay-api.cyber-freelance.workers.dev"
 
 [env.production.vars]
-VITE_API_URL = "https://freelance-pay-api.harshitmehta1012.workers.dev"
+VITE_API_URL = "https://freelance-pay-api.cyber-freelance.workers.dev"

@@ -25,7 +25,7 @@ import axios from 'axios';
 import { API, apiHeaders } from './api/config';
 import { notificationEngine } from './utils/NotificationManager';
 import CookieConsent from './components/CookieConsent';
-import { AuroraBackground } from './components/ui/aurora-background';
+import { BeamsBackground } from './components/ui/beams-background';
 
 // Pages that require authentication
 const AUTH_REQUIRED = [
@@ -754,16 +754,21 @@ export default function App() {
   const isCyber = colorThemeId === 'cyber';
 
   return (
-    <div className={`layout ${isCyber ? 'cyber-layout' : ''}`}>
-      <AuroraBackground />
-      {isCyber && (
-        <>
-          <div className="hud-corner hud-tl" style={{ position: 'fixed', zIndex: 10000, opacity: 0.8 }}></div>
-          <div className="hud-corner hud-tr" style={{ position: 'fixed', zIndex: 10000, opacity: 0.8 }}></div>
-          <div className="hud-corner hud-bl" style={{ position: 'fixed', zIndex: 10000, opacity: 0.8 }}></div>
-          <div className="hud-corner hud-br" style={{ position: 'fixed', zIndex: 10000, opacity: 0.8 }}></div>
-        </>
-      )}
+    <div className={`layout ${isCyber ? 'cyber-layout' : ''} min-h-screen relative overflow-hidden`}>
+      {/* Premium Background Layer - Fixed to prevent layout pushing */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: -2, pointerEvents: 'none' }}>
+        <BeamsBackground intensity="medium" />
+      </div>
+      
+      {/* High-Fidelity Gradient Overlays */}
+      <div style={{ 
+        position: 'fixed', 
+        inset: 0, 
+        zIndex: -1, 
+        pointerEvents: 'none',
+        background: 'radial-gradient(circle at 20% 30%, rgba(var(--primary-rgb), 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(var(--secondary-rgb), 0.15) 0%, transparent 50%)'
+      }} />
+      
       <Sidebar
         page={page} setPage={setPage}
         user={user} logout={logout}
@@ -772,6 +777,7 @@ export default function App() {
         onRegister={() => setAuthMode('register')}
         onRefresh={handleRefresh}
       />
+      
       <div className="main-content">
         <MobileHeader setOpen={setSidebarOpen} />
         <Header 
