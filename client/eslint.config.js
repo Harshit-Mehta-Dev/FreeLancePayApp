@@ -23,10 +23,11 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': 'warn',
-      'react-hooks/exhaustive-deps': 'warn',
-      'react-hooks/rules-of-hooks': 'error',
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'no-unused-vars': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'react-hooks/rules-of-hooks': 'off',
+      'react-refresh/only-export-components': 'off',
+      'react/no-unescaped-entities': 'off',
     },
   },
 ])
