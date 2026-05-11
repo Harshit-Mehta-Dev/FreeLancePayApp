@@ -352,7 +352,7 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
     .slice(0, 5);
 
   return (
-    <>
+    <div className="dashboard-page" style={{ padding: '0 40px' }}>
       {showWelcome && <WelcomeOverlay userName={user?.name || 'Freelancer'} onDismiss={onWelcomeClose} />}
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
@@ -485,7 +485,7 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
           <div className="empty-state"><div className="empty-icon">🎉</div><p>No bills yet — add one from Bills page!</p></div>
         )}
       </div>
-    </>
+    </div>
   );
 };
 
