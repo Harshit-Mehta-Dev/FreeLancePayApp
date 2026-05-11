@@ -1,7 +1,14 @@
 {
-  "name": "freelance-pay-app",
+  "name": "@harshit-mehta-lab/freelance-pay-app",
   "version": "1.0.0",
-  "description": "",
+  "description": "Premium Financial Command Center for Freelancers",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harshit-mehta-lab/FreeLancePayApp.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
