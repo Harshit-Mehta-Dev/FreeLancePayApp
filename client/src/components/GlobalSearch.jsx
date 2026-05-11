@@ -284,19 +284,19 @@ export default function GlobalSearch({ setPage, userRole }) {
         <div className="absolute -inset-[1px] bg-gradient-to-r from-primary/50 via-secondary/50 to-primary/50 rounded-xl blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         <button 
           type="button"
-          className="relative flex items-center gap-3 bg-neutral-900/60 backdrop-blur-2xl px-5 py-2.5 w-full rounded-xl transition-all border border-white/5 group-hover:border-white/10 cursor-pointer outline-none overflow-hidden"
+          className="relative flex items-center gap-3 bg-white/[0.03] hover:bg-white/[0.06] backdrop-blur-3xl px-4 py-2 w-full rounded-xl transition-all border border-white/5 hover:border-white/10 cursor-pointer outline-none overflow-hidden group"
           onClick={() => setIsOpen(true)}
         >
           {/* Subtle Scanline Animation */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none" />
           
-          <Search size={18} className="text-primary group-hover:scale-110 transition-transform duration-300" />
-          <span className="text-[14px] text-neutral-400 font-medium flex-1 text-left tracking-tight">
-            Search anything...
+          <Search size={16} className="text-primary group-hover:scale-110 transition-transform duration-300" />
+          <span className="text-[13px] text-neutral-400 font-medium flex-1 text-left tracking-tight">
+            Search systems, modules, or users...
           </span>
           
-          <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-lg border border-white/10 text-[10px] font-black text-neutral-500 tracking-tighter">
-            <Command size={11} />
+          <div className="flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded-lg border border-white/10 text-[9px] font-black text-neutral-500 tracking-tighter">
+            <Command size={10} />
             <span>K</span>
           </div>
         </button>

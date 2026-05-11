@@ -754,7 +754,7 @@ export default function App() {
   const isCyber = colorThemeId === 'cyber';
 
   return (
-    <div className={`layout ${isCyber ? 'cyber-layout' : ''} min-h-screen relative overflow-hidden`}>
+    <div className={`layout ${isCyber ? 'cyber-layout' : ''} min-h-screen relative overflow-x-hidden`}>
       {/* Premium Background Layer - Fixed to prevent layout pushing */}
       <div style={{ position: 'fixed', inset: 0, zIndex: -2, pointerEvents: 'none' }}>
         <BeamsBackground intensity="medium" />

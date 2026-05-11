@@ -35,6 +35,14 @@ export default function Header({ pageLabel, isHidden, setPage }) {
   const [uptime, setUptime] = useState('00:00:00');
   const [isLocked, setIsLocked] = useState(false);
   const [packets, setPackets] = useState([]);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Scroll detection
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Lock Animation on mount
   useEffect(() => {
@@ -88,7 +96,7 @@ export default function Header({ pageLabel, isHidden, setPage }) {
       style={{ 
         left: 'clamp(0px, 280px, 280px)',
         right: 0,
-        height: '80px',
+        height: '72px',
         background: isScrolled ? 'rgba(2, 6, 23, 0.85)' : 'transparent',
         backdropFilter: isScrolled ? 'blur(24px) saturate(180%)' : 'none',
         borderBottom: isScrolled ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',

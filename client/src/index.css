@@ -247,6 +247,7 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
+  overflow-y: auto;
   width: 100%;
   line-height: 1.6;
 }
@@ -725,8 +726,9 @@ tbody td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid rgba(25
   background: transparent;
   width: auto;
   z-index: 1; /* Ensure content is above background layers */
-  padding-top: 160px; /* High clearance for docked header */
+  padding-top: 140px; /* High clearance for docked header */
   overflow-x: hidden;
+  overflow-y: visible;
 }
 .main-content-inner {
   padding: 24px;
