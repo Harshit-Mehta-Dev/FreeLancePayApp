@@ -1,3 +1,4 @@
+/* global clients */
 const CACHE_NAME = 'cyber-cloud-v1';
 const MAINTENANCE_PAGE = '/maintenance.html';
 

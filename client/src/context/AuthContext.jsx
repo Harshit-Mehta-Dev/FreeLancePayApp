@@ -64,7 +64,9 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await axios.post(`${API}/auth/logout`);
-    } catch { }
+    } catch (err) {
+      console.warn('Logout request failed:', err.message);
+    }
     setUser(null);
     setIsBanned(false);
   };

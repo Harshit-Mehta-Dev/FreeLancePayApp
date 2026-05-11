@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from 'react';
 
 export default function VirtualInbox() {
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('code') || '';
+  });
   const [time, setTime] = useState(new Date().toLocaleTimeString());
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const c = urlParams.get('code');
-    if (c) setCode(c);
-    
     const interval = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
     return () => clearInterval(interval);
   }, []);
