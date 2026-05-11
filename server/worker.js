@@ -687,6 +687,84 @@ app.patch('/api/projects/:id/status', auth, async (c) => {
     return c.json({ success: true });
 });
 
+// --- E2EE CRYPTOGRAPHY HUB ---
+
+/**
+ * Uploads pre-key bundles for asynchronous X3DH handshakes
+ */
+app.post('/api/crypto/bundle', auth, async (c) => {
+    const { identityKey, signedPreKey, oneTimePreKeys } = await c.req.json();
+    const userId = c.get('user').id;
+
+    // Ensure tables exist
+    await c.env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS crypto_bundles (
+            user_id INTEGER PRIMARY KEY,
+            identity_key TEXT NOT NULL,
+            signed_pre_key TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `).run();
+
+    await c.env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS crypto_onetime_keys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            key_data TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    `).run();
+
+    // Store/Update Bundle
+    await c.env.DB.prepare(`
+        INSERT INTO crypto_bundles (user_id, identity_key, signed_pre_key) 
+        VALUES (?, ?, ?) 
+        ON CONFLICT(user_id) DO UPDATE SET 
+        identity_key=excluded.identity_key, 
+        signed_pre_key=excluded.signed_pre_key,
+        updated_at=CURRENT_TIMESTAMP
+    `).bind(userId, identityKey, signedPreKey).run();
+
+    // Store One-Time Keys
+    if (oneTimePreKeys && oneTimePreKeys.length > 0) {
+        const stmt = c.env.DB.prepare('INSERT INTO crypto_onetime_keys (user_id, key_data) VALUES (?, ?)');
+        await c.env.DB.batch(oneTimePreKeys.map(k => stmt.bind(userId, k)));
+    }
+
+    return c.json({ success: true });
+});
+
+/**
+ * Retrieves a peer's pre-key bundle to start an encrypted session
+ */
+app.get('/api/crypto/bundle/:peerEmail', auth, async (c) => {
+    const peerEmail = c.req.param('peerEmail');
+    
+    // Find peer by email
+    const peer = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(peerEmail).first();
+    if (!peer) return c.json({ error: 'Peer not found' }, 404);
+
+    const bundle = await c.env.DB.prepare('SELECT identity_key, signed_pre_key FROM crypto_bundles WHERE user_id = ?')
+        .bind(peer.id).first();
+    
+    if (!bundle) return c.json({ error: 'Peer has not initialized E2EE' }, 404);
+
+    // Get one one-time key and delete it (it's "one-time")
+    const otk = await c.env.DB.prepare('SELECT id, key_data FROM crypto_onetime_keys WHERE user_id = ? LIMIT 1')
+        .bind(peer.id).first();
+    
+    if (otk) {
+        await c.env.DB.prepare('DELETE FROM crypto_onetime_keys WHERE id = ?').bind(otk.id).run();
+    }
+
+    return c.json({
+        identityKey: bundle.identity_key,
+        signedPreKey: bundle.signed_pre_key,
+        oneTimePreKey: otk ? otk.key_data : null
+    });
+});
+
+
 app.delete('/api/projects/:id', auth, async (c) => {
     await c.env.DB.prepare('DELETE FROM projects WHERE id = ? AND user_id = ?')
         .bind(c.req.param('id'), c.get('user').id).run();

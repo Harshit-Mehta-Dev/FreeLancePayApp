@@ -19,6 +19,8 @@ import TimeTracker from './pages/TimeTracker';
 import Invoices from './pages/Invoices';
 import Expenses from './pages/Expenses';
 import VirtualInbox from './pages/VirtualInbox';
+import CryptoDashboard from './pages/CryptoDashboard';
+
 import Footer from './components/Footer';
 import Header from './components/Header';
 import axios from 'axios';
@@ -115,7 +117,9 @@ const NAV = [
   { id: 'feedback',  label: 'Feedback', icon: '💬', public: false },
   { id: 'bugs',      label: 'Bug Reports', icon: '🐛', public: false },
   { id: 'security',  label: 'Security', icon: '🛡️', public: false, adminOnly: true },
+  { id: 'crypto',    label: 'Crypto Hub', icon: '💎', public: false },
 ];
+
 
 // ─── Auth Gate Banner ──────────────────────────────────────────────────────────
 const AuthGateBanner = ({ pageName, onLogin, onRegister }) => (
@@ -738,7 +742,9 @@ export default function App() {
       feedback:  () => <Feedback />,
       security:  () => <SecurityDashboard />,
       bugs:      () => <Bugs />,
+      crypto:    () => <CryptoDashboard />,
       'verification-help': () => <VirtualInbox />
+
     };
 
     const RenderComp = pageMap[page] || pageMap.dashboard;

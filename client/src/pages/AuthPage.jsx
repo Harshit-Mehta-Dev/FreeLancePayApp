@@ -6,6 +6,8 @@ import axios from 'axios';
 import { API, GOOGLE_CLIENT_ID } from '../api/config';
 import { ArrowLeft, CheckCircle2, Shield, Zap, TrendingUp, Sparkles, X, Loader2, Database, ShieldCheck, UserCheck, Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
+import { SecureVault } from '../lib/crypto/SecureVault';
+
 
 export default function AuthPage({ defaultMode = 'login', onSuccess, onCancel, showCancel = false }) {
   const [mode, setMode] = useState(defaultMode);
@@ -23,10 +25,20 @@ export default function AuthPage({ defaultMode = 'login', onSuccess, onCancel, s
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
   const startAnalysis = (initialMsg) => {
-    void initialMsg; // Keep for future use
     setAnalysisPhase('booting');
     
-    // Phase 1: Booting (0.8s)
+    // Phase 1: Booting (0.8s) - Initialize Cryptographic Vault
+    const initVault = async () => {
+      try {
+        const vault = new SecureVault();
+        await vault.init();
+        console.log('E2EE Vault initialized for session');
+      } catch (err) {
+        console.error('Vault initialization failed:', err);
+      }
+    };
+    initVault();
+
     setTimeout(() => {
       setAnalysisPhase('analyzing');
       // Phase 2: Analyzing (1.5s)
