@@ -1,25 +1,49 @@
 {
-  "name": "freelance-pay-app",
+  "name": "freelance-pay-server",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type": "commonjs",
   "scripts": {
-    "start": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "npm start --prefix server",
-    "client": "npm run dev --prefix client",
-    "install-all": "npm install && npm install --prefix server && npm install --prefix client",
-    "docker:up": "docker-compose up --build",
-    "docker:down": "docker-compose down",
-    "clean": "rimraf node_modules client/node_modules server/node_modules",
-    "build": "npm run build --prefix client",
-    "deploy:api": "npm run deploy --prefix server",
-    "deploy:client": "npm run build --prefix client && npx wrangler pages deploy client/dist --project-name freelance-pay-cloud",
-    "deploy": "npm run deploy:api && npm run deploy:client",
+    "start": "node server.js",
+    "deploy": "wrangler deploy",
     "test": "echo \"Error: no test specified\" && exit 1"
 
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@hono/node-server": "^2.0.0",
+    "apicache": "^1.6.3",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.9.0",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.4.1",
+    "express-slow-down": "^3.1.0",
+    "express-xss-sanitizer": "^2.0.2",
+    "google-auth-library": "^10.6.2",
+    "helmet": "^8.1.0",
+    "hono": "^4.12.15",
+    "joi": "^18.1.2",
+    "jose": "^6.2.2",
+    "jsonwebtoken": "^9.0.3",
+    "knex": "^3.2.9",
+    "mongoose": "^9.5.0",
+    "mysql2": "^3.22.3",
+    "nodemailer": "^8.0.6",
+    "pdfkit": "^0.18.0",
+    "pg": "^8.20.0",
+    "sqlite3": "^6.0.1"
+  },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "wrangler": "^4.120.0"
+
   }
 }
