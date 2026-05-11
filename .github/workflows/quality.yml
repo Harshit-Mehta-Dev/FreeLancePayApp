@@ -1,0 +1,43 @@
+name: 💎 Code Quality & Security
+
+on:
+  push:
+    branches: [ main, frontend, backend ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: 🎨 Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: 📦 Install & Lint Frontend
+        run: |
+          cd client
+          npm install
+          npm run lint --if-present
+
+      - name: 📦 Install & Lint Backend
+        run: |
+          cd server
+          npm install
+          npm run lint --if-present
+
+  security-scan:
+    name: 🛡️ Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔍 Audit Dependencies
+        run: |
+          npm audit --audit-level=high --if-present
