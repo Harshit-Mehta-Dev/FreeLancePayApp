@@ -7,7 +7,6 @@
     "start": "node server.js",
     "deploy": "wrangler deploy",
     "test": "echo \"Error: no test specified\" && exit 1"
-
   },
   "keywords": [],
   "author": "",
@@ -43,7 +42,6 @@
     "sqlite3": "^6.0.1"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0"
-
+    "wrangler": "^4.93.0"
   }
 }
