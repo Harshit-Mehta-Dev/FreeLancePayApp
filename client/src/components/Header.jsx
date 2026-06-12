@@ -32,7 +32,6 @@ const NotificationBell = () => {
 
 export default function Header({ pageLabel, isHidden, setPage }) {
   const { user } = useAuth();
-  const [uptime, setUptime] = useState('00:00:00');
   const [isLocked, setIsLocked] = useState(false);
   const [packets, setPackets] = useState([]);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -49,38 +48,7 @@ export default function Header({ pageLabel, isHidden, setPage }) {
     setTimeout(() => setIsLocked(true), 300);
   }, []);
 
-  // Uptime Counter
-  useEffect(() => {
-    const start = Date.now();
-    const itv = setInterval(() => {
-      const diff = Math.floor((Date.now() - start) / 1000);
-      const h = Math.floor(diff / 3600).toString().padStart(2, '0');
-      const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
-      const s = (diff % 60).toString().padStart(2, '0');
-      setUptime(`${h}:${m}:${s}`);
-    }, 1000);
-    return () => clearInterval(itv);
-  }, []);
 
-  // Data Stream Effect
-  useEffect(() => {
-    const spawnPacket = () => {
-      const id = Math.random();
-      const content = Math.random() > 0.5 
-        ? Math.random().toString(16).slice(2, 8).toUpperCase() 
-        : Math.random().toString(2).slice(2, 8);
-      
-      setPackets(prev => [...prev, { id, content, top: Math.random() * 80 + 10 }]);
-      setTimeout(() => {
-        setPackets(prev => prev.filter(p => p.id !== id));
-      }, 4000);
-    };
-
-    const itv = setInterval(() => {
-      if (Math.random() > 0.6) spawnPacket();
-    }, 1500);
-    return () => clearInterval(itv);
-  }, []);
 
   return (
     <motion.header 
@@ -104,71 +72,93 @@ export default function Header({ pageLabel, isHidden, setPage }) {
         boxShadow: isScrolled ? '0 10px 30px -10px rgba(0, 0, 0, 0.5)' : 'none'
       }}
     >
-      {/* Header Grid Background */}
-      <div className="header-grid-bg" />
-
-      <div className="flex items-center justify-between w-full h-full relative z-10 gap-4">
-        {/* Left: Page Title & Identity */}
-        <div className="flex items-center gap-5 shrink-0 min-w-0 max-w-[240px]">
-          <div className="relative flex items-center justify-center shrink-0">
-            <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_12px_rgba(var(--primary-rgb),0.8)]" />
-            <motion.div 
-              animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.5, 0.2] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute inset-[-4px] rounded-full bg-primary/30" 
-            />
+      {/* Flex Layout for Better Responsiveness */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        width: '100%',
+        gap: 20
+      }}>
+        {/* Left Side: Page Identity */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18, position: 'relative', zIndex: 2 }}>
+          <div className="header-status-dot-wrap">
+            <div className="header-status-dot"></div>
+            <div className="header-status-dot-pulse"></div>
           </div>
-          
-          <div className="flex flex-col min-w-0">
-            <motion.h2 
-              layoutId="header-title"
-              className="text-2xl font-black text-white font-display tracking-tight leading-none truncate"
-            >
-              {pageLabel}
-            </motion.h2>
-            <div className="flex items-center gap-2 mt-1 overflow-hidden opacity-60">
-              <Activity size={10} className="text-primary animate-pulse" />
-              <span className="text-[9px] font-bold text-neutral-400 font-mono tracking-wider truncate uppercase">
-                {user ? `SECURE_NODE // ${user.name.split(' ')[0]}` : 'ANON_SESSION'}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 style={{ 
+                fontSize: 22, fontWeight: 900, margin: 0, 
+                textTransform: 'uppercase', letterSpacing: '-0.5px', 
+                color: 'var(--text-primary)', fontFamily: 'var(--font-display)',
+                textShadow: '0 0 20px rgba(var(--primary-rgb), 0.2)'
+              }}>
+                {pageLabel}
+              </h2>
+            </div>
+            <div className="ticker-content" style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ 
+                color: 'var(--primary)', fontWeight: 800, fontSize: '10px', 
+                letterSpacing: '1px', textTransform: 'uppercase',
+                background: 'rgba(var(--primary-rgb), 0.1)',
+                padding: '2px 6px', borderRadius: '4px'
+              }}>
+                ACTIVE
+              </span>
+              <span style={{ fontSize: 10, letterSpacing: '0.5px', fontFamily: 'JetBrains Mono', color: 'var(--text-secondary)', opacity: 0.7 }}>
+                {user ? `// AUTH: ${user.name.toUpperCase()}` : '// GUEST_LINK_ANON'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Center: Search Hub (Flexible) */}
-        <div className="flex-1 flex justify-center min-w-0 max-w-2xl px-4">
+        {/* Center: Search Hub */}
+        <div style={{ display: 'flex', justifyContent: 'center', zIndex: 10 }}>
           <GlobalSearch setPage={setPage} userRole={user?.role} />
         </div>
 
-        {/* Right: Telemetry & Actions */}
-        <div className="flex items-center gap-6 shrink-0">
-          <div className="hidden xl:flex flex-col items-end border-r border-white/5 pr-6">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
-              <Clock size={12} className="text-emerald-500/70" />
-              SESSION: <span className="font-mono text-white/90">{uptime}</span>
-            </div>
-            <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
-              <ShieldCheck size={12} className="text-primary/70" />
-              V3.0 // STABLE
-            </div>
+        {/* Right Side: Actions & Profile */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, justifyContent: 'flex-end', position: 'relative', zIndex: 2 }}>
+          <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-primary)', marginTop: 2, fontFamily: 'var(--font-display)', letterSpacing: '1px' }}>
+            {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="p-1 hover:bg-white/5 rounded-xl transition-colors cursor-pointer group">
-              <NotificationBell />
-            </div>
-            
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="h-10 w-10 rounded-xl bg-neutral-900 border border-white/10 p-0.5 flex items-center justify-center cursor-pointer shadow-lg hover:border-primary/40 transition-all"
+          <NotificationBell />
+
+          {user && (
+            <div 
+              className="header-avatar-wrap"
+              onClick={() => setPage('settings')}
+              style={{ 
+                width: 40, height: 40, borderRadius: '12px', 
+                background: 'linear-gradient(135deg, var(--primary), var(--secondary))', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                padding: '2px', flexShrink: 0,
+                boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+                cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              }}
             >
-               <img 
-                src={`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${user?.id || 'guest'}&backgroundColor=transparent`} 
-                alt="Avatar" 
-                className="w-full h-full rounded-[10px]"
-              />
-            </motion.div>
+              <div style={{ width: '100%', height: '100%', borderRadius: '10px', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                {user.avatar?.startsWith('data:image') || user.avatar?.startsWith('http') ? (
+                  <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" />
+                ) : (
+                  <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--primary)' }}>{user.name?.[0]?.toUpperCase()}</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="live-status-pill" style={{ 
+            display: 'flex', alignItems: 'center', gap: 8, 
+            background: 'rgba(var(--primary-rgb), 0.08)', 
+            padding: '6px 12px', 
+            borderRadius: '10px', 
+            border: '1px solid rgba(var(--primary-rgb), 0.15)',
+            cursor: 'default'
+          }}>
+            <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--primary)', letterSpacing: '1px' }}>LIVE</span>
+            <div className="pulse-dot"></div>
           </div>
         </div>
       </div>
