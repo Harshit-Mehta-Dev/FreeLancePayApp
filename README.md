@@ -1,7 +1,9 @@
 # 💸 FreeLancePay
 
 <p align="center">
-  <img src="https://media.giphy.com/media/26tP21xUQnOCIIoFi/giphy.gif" alt="Freelance Finance Animation" width="450" style="border-radius: 12px;"/>
+  <a href="https://github.com/Harshit-Mehta-Dev/FreeLancePayApp">
+    <img src="https://readme-typing-svg.demolab.com?font=Space+Grotesk&weight=700&size=30&duration=3000&pause=1000&color=8B5CF6&center=true&vCenter=true&width=650&lines=Freelance+Financial+Command+Center;Track+Bills,+Income,+and+Cashflow;Secure,+Fast,+and+Beautiful" alt="FreeLancePay Animated Title" />
+  </a>
 </p>
 
 <h3 align="center">Premium Financial Command Center for Freelancers</h3>
