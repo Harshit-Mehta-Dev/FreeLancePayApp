@@ -725,14 +725,13 @@ tbody td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid rgba(25
   position: relative;
   background: transparent;
   width: auto;
-  z-index: 1; /* Ensure content is above background layers */
-  padding-top: 140px; /* High clearance for docked header */
+  z-index: 1;
   overflow-x: hidden;
   overflow-y: visible;
 }
 .main-content-inner {
   padding: 24px;
-  padding-top: 88px; /* Clearance for the 72px fixed header plus spacing */
+  padding-top: 80px; /* 64px header height + 16px spacing */
   box-sizing: border-box;
 }
 .mobile-header {
