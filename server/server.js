@@ -1143,16 +1143,17 @@ app.post('/api/bills/:id/pay', auth, async (req, res) => {
 
       if (!existingNext) {
         await db('bills').insert({
-        user_id: bill.user_id,
-        name: bill.name,
-        category: bill.category,
-        amount: bill.amount,
-        due_date: nextDate,
-        recurrence: bill.recurrence,
-        status: 'upcoming',
-        notes: bill.notes,
-        client: bill.client
-      });
+          user_id: bill.user_id,
+          name: bill.name,
+          category: bill.category,
+          amount: bill.amount,
+          due_date: nextDate,
+          recurrence: bill.recurrence,
+          status: 'upcoming',
+          notes: bill.notes,
+          client: bill.client
+        });
+      }
     }
   }
   res.json({ success: true });

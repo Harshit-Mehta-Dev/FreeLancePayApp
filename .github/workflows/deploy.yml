@@ -16,7 +16,7 @@ jobs:
       - name: 🛠️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
       - name: 📦 Install Dependencies
         run: |
@@ -37,6 +37,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: 'server'
           command: deploy
+          wranglerVersion: 'latest'
 
   deploy-frontend:
     runs-on: ubuntu-latest
@@ -49,7 +50,7 @@ jobs:
       - name: 🛠️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
       - name: 📦 Install Dependencies
         run: |
@@ -76,3 +77,4 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: 'client'
           command: pages deploy dist --project-name=freelance-pay-cloud
+          wranglerVersion: 'latest'
