@@ -8,6 +8,7 @@ import { formatCurrency, formatDate, daysUntil } from '../utils/helpers';
 import { ChevronRight, CreditCard, PieChart as PieIcon, Activity, Calendar as CalIcon, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle, FileText } from 'lucide-react';
 import axios from 'axios';
 import { API, apiHeaders } from '../api/config';
+import { notificationEngine } from '../utils/NotificationManager';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -17,7 +18,13 @@ const getCategoryMeta = (cat) => {
   const meta = {
     housing: { icon: '🏠', label: 'Housing' },
     utilities: { icon: '⚡', label: 'Utilities' },
-    subscriptions: { icon: '📺', label: 'Subs' },
+    utility: { icon: '⚡', label: 'Utilities' },
+    subscription: { icon: '🔄', label: 'Subscription' },
+    subscriptions: { icon: '🔄', label: 'Subscription' },
+    software: { icon: '💻', label: 'Software' },
+    tech: { icon: '🖥️', label: 'Tech' },
+    rent: { icon: '🏢', label: 'Rent' },
+    invoice: { icon: '📄', label: 'Invoice' },
     transport: { icon: '🚗', label: 'Transport' },
     food: { icon: '🍕', label: 'Food' },
     insurance: { icon: '🛡️', label: 'Insurance' },
@@ -25,7 +32,7 @@ const getCategoryMeta = (cat) => {
     work: { icon: '🛠️', label: 'Work' },
     personal: { icon: '👤', label: 'Personal' }
   };
-  return meta[cat.toLowerCase()] || { icon: '📄', label: cat };
+  return meta[cat.toLowerCase()] || { icon: '📄', label: cat.charAt(0).toUpperCase() + cat.slice(1) };
 };
 
 // ─── Feature Slider ───────────────────────────────────────────────────────────
@@ -285,6 +292,13 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
   const [bills, setBills] = useState([]);
   const [income, setIncome] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notifPermission, setNotifPermission] = useState('default');
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -367,6 +381,37 @@ const AuthDashboard = ({ currency, setPage, showWelcome, onWelcomeClose }) => {
            <button className="btn btn-primary btn-sm" onClick={() => setPage('income')}>Log Income</button>
         </div>
       </div>
+
+      {notifPermission === 'default' && (
+        <div className="glass-card reveal" style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '16px 24px', marginBottom: 24, borderLeft: '4px solid var(--accent-purple)',
+          background: 'rgba(255, 255, 255, 0.02)', borderRadius: '16px', gap: 16, flexWrap: 'wrap'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: 24 }}>🔔</span>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#fff' }}>Enable Real-time Desktop Notifications</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+                Get critical alerts for recurring bills, payments completed successfully, and overdue warnings directly on your device.
+              </div>
+            </div>
+          </div>
+          <button 
+            className="btn btn-primary"
+            onClick={async () => {
+              const granted = await notificationEngine.requestPermission();
+              setNotifPermission(Notification.permission);
+              if (granted) {
+                notificationEngine.alertSuccess('Desktop Alerts Active!', 'You will now receive real-time notifications for payments and due dates.');
+              }
+            }}
+            style={{ padding: '10px 20px', fontSize: 13, fontWeight: 900 }}
+          >
+            Enable Notifications
+          </button>
+        </div>
+      )}
 
       {bills.length === 0 && (
         <div className="glass-card" style={{ padding: 32, textAlign: 'center', marginBottom: 24, border: '2px dashed var(--glass-border)' }}>

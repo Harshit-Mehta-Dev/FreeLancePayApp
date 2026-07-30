@@ -4,7 +4,7 @@ compatibility_date = "2026-05-11"
 
 
 [vars]
-VITE_API_URL = "https://freelance-pay-api.cyber-freelance.workers.dev"
+VITE_API_URL = "/api"
 
 [env.production.vars]
-VITE_API_URL = "https://freelance-pay-api.cyber-freelance.workers.dev"
+VITE_API_URL = "/api"

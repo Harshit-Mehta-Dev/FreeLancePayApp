@@ -23,6 +23,7 @@ import CryptoDashboard from './pages/CryptoDashboard';
 
 import Footer from './components/Footer';
 import Header from './components/Header';
+import Subscriptions from './pages/Subscriptions';
 import axios from 'axios';
 import { API, apiHeaders } from './api/config';
 import { notificationEngine } from './utils/NotificationManager';
@@ -109,6 +110,7 @@ const NAV = [
   { id: 'time',      label: 'Time Tracker', icon: '⏱️', public: false },
   { id: 'invoices',  label: 'Invoices',  icon: '🧾', public: false },
   { id: 'bills',     label: 'Bills',     icon: '💳', public: false },
+  { id: 'subscriptions', label: 'Subscriptions', icon: '🔄', public: false },
   { id: 'expenses',  label: 'Expenses',  icon: '💸', public: false },
   { id: 'calendar',  label: 'Calendar',  icon: '📅', public: false },
   { id: 'income',    label: 'Income',    icon: '💰', public: false },
@@ -385,76 +387,7 @@ function MobileHeader({ setOpen }) {
 }
 
 // ─── App Root ──────────────────────────────────────────────────────────────────
-const MaintenanceOverlay = () => {
-  const messages = [
-    "Just taking a quick nap... we'll be back in a flash! ✨",
-    "Brewing some fresh financial magic just for you. ☕",
-    "Polishing your dashboard to a high premium shine. 💎",
-    "Our numbers are doing some yoga. Namaste. 🧘",
-    "The data streams are resting. Waking them up soon. 🌙",
-    "Adding a touch of stardust to your financial vault. 🌌",
-  ];
-  const [msg, setMsg] = useState(messages[0]);
-  const [fade, setFade] = useState(true);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFade(false);
-      setTimeout(() => {
-        setMsg(messages[Math.floor(Math.random() * messages.length)]);
-        setFade(true);
-      }, 800);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-      background: 'var(--bg-primary)', zIndex: 999999, display: 'flex',
-      flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      backdropFilter: 'blur(30px)', color: 'var(--text-primary)', textAlign: 'center', padding: 20
-    }}>
-      <div className="maintenance-container" style={{
-        padding: '50px 60px', background: 'var(--bg-glass)',
-        borderRadius: 40, border: '1px solid var(--glass-border)',
-        boxShadow: 'var(--glass-shadow)',
-        transition: 'all 0.5s ease',
-        cursor: 'default'
-      }}>
-        <div className="maintenance-anim" style={{ position: 'relative', width: 100, height: 100, margin: '0 auto 40px' }}>
-          <div className="pulse-orb" style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--primary)', opacity: 0.2, animation: 'maintenance-pulse 2s infinite' }}></div>
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 50, height: 50 }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5">
-              <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z"/>
-              <path d="M12 22V12" strokeOpacity="0.5"/>
-              <path d="M21 7L12 12L3 7" strokeOpacity="0.5"/>
-            </svg>
-          </div>
-        </div>
-        <h1 style={{ fontFamily: 'Space Grotesk', fontSize: '2.4rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: -1 }}>
-          System Maintenance
-        </h1>
-        <p style={{ 
-          color: 'var(--text-secondary)', maxWidth: 420, fontSize: '1.2rem', marginTop: 25, 
-          transition: 'all 0.8s ease', opacity: fade ? 1 : 0, transform: fade ? 'translateY(0)' : 'translateY(10px)',
-          minHeight: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 500
-        }}>
-          {msg}
-        </p>
-        <div style={{ marginTop: 40, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: 2 }}>
-          <div style={{ width: 6, height: 6, background: 'var(--primary)', borderRadius: '50%', animation: 'blink 1.5s infinite' }}></div>
-          RECONNECTING...
-        </div>
-      </div>
-      <style>{`
-        @keyframes maintenance-pulse { 0% { transform: scale(0.9); opacity: 0.4; } 50% { transform: scale(1.4); opacity: 0.1; } 100% { transform: scale(0.9); opacity: 0.4; } }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-        .maintenance-container:hover { transform: scale(1.02) translateY(-5px); border-color: var(--primary); }
-      `}</style>
-    </div>
-  );
-};
 
 export default function App() {
   const { user, loading, isBanned, logout } = useAuth();
@@ -467,7 +400,6 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
-  const [serverDown, setServerDown] = useState(false);
   const lastScrollY = useRef(0);
 
   useEffect(() => {
@@ -489,21 +421,7 @@ export default function App() {
     }, 2500);
   };
 
-  // Real-time Server Monitor
   useEffect(() => {
-    const interceptor = axios.interceptors.response.use(
-      res => {
-        setServerDown(false);
-        return res;
-      },
-      err => {
-        if (!err.response) {
-          setServerDown(true);
-        }
-        return Promise.reject(err);
-      }
-    );
-    
     // Heartbeat check every 10s
     const heartbeat = setInterval(async () => {
       try {
@@ -511,11 +429,8 @@ export default function App() {
         if (res.data.is_banned) {
           window.location.reload(); // Force trigger ban overlay
         }
-        setServerDown(false);
       } catch (e) {
-        if (!e.response) {
-          setServerDown(true);
-        } else if (e.response.status === 403) {
+        if (e.response?.status === 403) {
           // IMMEDIATE BAN ENFORCEMENT
           window.location.reload(); 
         }
@@ -523,7 +438,6 @@ export default function App() {
     }, 5000);
 
     return () => {
-      axios.interceptors.response.eject(interceptor);
       clearInterval(heartbeat);
     };
   }, []);
@@ -603,6 +517,7 @@ export default function App() {
       try {
         const { data: bills } = await axios.get(`${API}/bills`, { headers: apiHeaders() });
         const overdue = bills.filter(b => b.status === 'overdue');
+        const upcoming = bills.filter(b => b.status === 'upcoming');
         
         if (overdue.length > 0) {
           const first = overdue[0];
@@ -611,6 +526,18 @@ export default function App() {
             first.amount, 
             user.currency === 'INR' ? '₹' : (user.currency === 'EUR' ? '€' : '$')
           );
+        }
+
+        if (upcoming.length > 0) {
+          const soon = upcoming.filter(b => {
+            const ms = new Date(b.due_date) - new Date();
+            const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+            return days >= 0 && days <= 3;
+          });
+          if (soon.length > 0) {
+            const first = soon[0];
+            notificationEngine.alertReminder(first.name, new Date(first.due_date).toLocaleDateString());
+          }
         }
       } catch (err) {
         console.warn('Sentinel failed to scan financials', err);
@@ -733,6 +660,7 @@ export default function App() {
       invoices:  () => <Invoices clientId={pageData?.clientId} projectId={pageData?.projectId} />,
       expenses:  () => <Expenses />,
       bills:     () => <Bills initialFilter={billFilter} />,
+      subscriptions: () => <Subscriptions />,
       income:    () => <Income />,
       cashflow:  () => <Cashflow />,
       payments:  () => <Payments />,
@@ -774,7 +702,6 @@ export default function App() {
         pointerEvents: 'none',
         background: 'radial-gradient(circle at 20% 30%, rgba(var(--primary-rgb), 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(var(--secondary-rgb), 0.15) 0%, transparent 50%)'
       }} />
-      
       <Sidebar
         page={page} setPage={setPage}
         user={user} logout={logout}
@@ -798,9 +725,7 @@ export default function App() {
       </div>
       <CookieConsent />
       
-      {serverDown && (
-        <MaintenanceOverlay />
-      )}
+
 
       {isBanned && (
         <BanOverlay />

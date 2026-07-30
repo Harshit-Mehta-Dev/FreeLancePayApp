@@ -4,9 +4,9 @@ axios.defaults.withCredentials = true;
 axios.defaults.timeout = 10000; // 10 seconds timeout
 
 const LOCAL_API = '/api'; // Use Vite proxy for local dev
-const CLOUD_API = 'https://freelance-pay-api.cyber-freelance.workers.dev/api';
+const CLOUD_API = '/api'; // Uses Cloudflare Pages function proxy
 
-export const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? LOCAL_API : CLOUD_API);
+export const API = import.meta.env.VITE_API_URL || '/api';
 
 export const apiHeaders = () => {
   return {}; // Placeholder for now, can be used for custom headers if needed

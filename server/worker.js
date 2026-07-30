@@ -3,8 +3,50 @@ import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { getCookie, setCookie } from 'hono/cookie';
 import bcrypt from 'bcryptjs';
+
 import * as jose from 'jose';
 import { encrypt, decrypt } from './worker-encryption.js';
+
+// --- SECURE CRYPTOGRAPHY (WebCrypto PBKDF2) ---
+const hashPassword = async (password) => {
+  const enc = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']
+  );
+  const hash = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  const hashArray = Array.from(new Uint8Array(hash));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `$pbkdf2$100000$${saltHex}$${hashHex}`;
+};
+
+const verifyPassword = async (password, storedHash) => {
+  if (storedHash.startsWith('$pbkdf2$')) {
+    const [, , iterationsStr, saltHex, originalHashHex] = storedHash.split('$');
+    const iterations = parseInt(iterationsStr, 10);
+    const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']
+    );
+    const hashBuffer = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: salt, iterations: iterations, hash: 'SHA-256' },
+      keyMaterial, 256
+    );
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const newHashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    return newHashHex === originalHashHex;
+  }
+  
+  // Legacy bcrypt fallback for older passwords
+  return await bcrypt.compare(password, storedHash);
+};
 
 const app = new Hono();
 
@@ -12,7 +54,7 @@ const app = new Hono();
 app.use('*', secureHeaders());
 
 // 2. STRICT ORIGIN LOCKDOWN
-const ALLOWED_ORIGIN = 'https://freelance-pay-cloud.pages.dev';
+const getOrigin = (c) => c.env.AUTH_ORIGIN || 'https://freelance-pay-cloud.pages.dev';
 
 // 3. INTELLIGENT RATE LIMITER (In-Memory per Isolate)
 const rateLimitMap = new Map();
@@ -38,10 +80,13 @@ app.use('*', async (c, next) => {
   }
 
   const origin = c.req.header('Origin');
+  const ALLOWED_ORIGIN = getOrigin(c);
   if (origin) {
     const isAllowed = origin === ALLOWED_ORIGIN || origin.endsWith('.pages.dev') || origin.includes('localhost') || origin.includes('127.0.0.1');
     if (!isAllowed) {
       console.warn(`Blocked request from unauthorized origin: ${origin}`);
+      const ip = c.req.header('CF-Connecting-IP') || 'Unknown';
+      await logSecurityEvent(c, 'SECURITY_VIOLATION_ORIGIN', ip, `Blocked request from unauthorized origin: ${origin}`);
       return c.json({ error: 'Security Violation: Origin not permitted' }, 403);
     }
   }
@@ -49,14 +94,20 @@ app.use('*', async (c, next) => {
 });
 
 app.use('*', cors({
-  origin: (origin) => {
+  origin: (origin, c) => {
+    const ALLOWED_ORIGIN = getOrigin(c);
     if (!origin) return ALLOWED_ORIGIN;
-    const isAllowed = origin === ALLOWED_ORIGIN || origin.endsWith('.pages.dev') || origin.includes('localhost') || origin.includes('127.0.0.1');
+    // Explicitly allow the primary production domain and common development origins
+    const isAllowed = origin === ALLOWED_ORIGIN || 
+                      origin === 'https://freelance-pay-cloud.pages.dev' ||
+                      origin.endsWith('.pages.dev') || 
+                      origin.includes('localhost') || 
+                      origin.includes('127.0.0.1');
     return isAllowed ? origin : ALLOWED_ORIGIN;
   },
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowHeaders: ['Content-Type', 'Authorization'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   maxAge: 600,
 }));
 
@@ -101,19 +152,79 @@ const logSecurityEvent = async (c, type, ip, details) => {
   } catch (e) { console.error('Log failed', e); }
 };
 
+// --- STRIPE ROUTES ---
+app.post('/api/stripe/create-checkout-session', async (c) => {
+  try {
+    const { tier, billingCycle, currency, successUrl, cancelUrl } = await c.req.json();
+    
+    const stripeSecretKey = c.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) return c.json({ error: 'Stripe not configured' }, 500);
+    
+    let price = 0;
+    if (tier === 'pro') {
+      if (currency === 'INR') {
+        price = billingCycle === 'monthly' ? 799 : 639;
+      } else {
+        price = billingCycle === 'monthly' ? 9 : 7;
+      }
+    } else if (tier === 'premium') {
+      if (currency === 'INR') {
+        price = billingCycle === 'monthly' ? 2499 : 1999;
+      } else {
+        price = billingCycle === 'monthly' ? 29 : 23;
+      }
+    } else {
+      return c.json({ error: 'Invalid tier' }, 400);
+    }
+    
+    const unitAmountCents = price * 100;
+    const name = tier === 'pro' ? 'Freelancer Pro' : 'Agency Premium';
+    
+    const bodyParams = new URLSearchParams();
+    bodyParams.append('payment_method_types[0]', 'card');
+    bodyParams.append('mode', 'payment');
+    bodyParams.append('success_url', successUrl);
+    bodyParams.append('cancel_url', cancelUrl);
+    bodyParams.append('line_items[0][price_data][currency]', currency.toLowerCase());
+    bodyParams.append('line_items[0][price_data][product_data][name]', name);
+    bodyParams.append('line_items[0][price_data][unit_amount]', unitAmountCents.toString());
+    bodyParams.append('line_items[0][quantity]', '1');
+    
+    const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${stripeSecretKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: bodyParams.toString()
+    });
+    
+    if (!stripeRes.ok) {
+      const errBody = await stripeRes.text();
+      throw new Error(`Stripe API returned ${stripeRes.status}: ${errBody}`);
+    }
+    
+    const session = await stripeRes.json();
+    return c.json({ url: session.url, id: session.id });
+  } catch (err) {
+    console.error('Stripe error in Worker:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 // --- AUTH ROUTES ---
 
 app.post('/api/auth/register', async (c) => {
-  const { name, email, password, currency } = await c.req.json();
-  const hashedPassword = await bcrypt.hash(password, 10);
-  
-  // Check if email was previously banned
-  const existing = await c.env.DB.prepare('SELECT is_banned FROM users WHERE email = ?').bind(email).first();
-  if (existing?.is_banned) {
-    return c.json({ error: 'PERMANENT_BAN', message: 'This email is permanently blacklisted.' }, 403);
-  }
-
   try {
+    const { name, email, password, currency } = await c.req.json();
+    const hashedPassword = await hashPassword(password);
+    
+    // Check if email was previously banned
+    const existing = await c.env.DB.prepare('SELECT is_banned FROM users WHERE email = ?').bind(email).first();
+    if (existing?.is_banned) {
+      return c.json({ error: 'PERMANENT_BAN', message: 'This email is permanently blacklisted.' }, 403);
+    }
+
     const role = isRootAdmin(email) ? 'admin' : 'user';
     const result = await c.env.DB.prepare(
       'INSERT INTO users (name, email, password, currency, role) VALUES (?, ?, ?, ?, ?) RETURNING id'
@@ -125,9 +236,9 @@ app.post('/api/auth/register', async (c) => {
 
     setCookie(c, 'fp_token', token, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 60 * 60 * 24 * 7 });
     return c.json({ success: true, user });
-  } catch (e) { 
-    console.error('Register error:', e);
-    return c.json({ error: 'Email already exists' }, 400); 
+  } catch (e) {
+    console.error('FATAL REGISTER ERROR:', e.stack || e);
+    return c.json({ error: 'Email already exists or error occurred: ' + e.message }, 400);
   }
 });
 
@@ -142,7 +253,7 @@ app.post('/api/auth/login', async (c) => {
     return c.json({ error: 'PERMANENT_BAN', message: 'Access Denied: Permanent Suspension Active.' }, 403);
   }
 
-  if (!user || !(await bcrypt.compare(password, user.password))) {
+  if (!user || !(await verifyPassword(password, user.password))) {
     await logSecurityEvent(c, 'AUTH_FAILURE', ip, `Failed login attempt for: ${email}`);
     return c.json({ error: 'Invalid credentials' }, 401);
   }
@@ -159,6 +270,60 @@ app.post('/api/auth/login', async (c) => {
     path: '/'
   });
   return c.json({ user: { id: user.id, name: user.name, email: user.email, currency: user.currency, role } });
+});
+
+app.post('/api/auth/forgot-password', async (c) => {
+  const { email } = await c.req.json();
+  const user = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
+  
+  if (!user) {
+    return c.json({ message: 'If the email exists, a reset code was sent.' });
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  
+  await c.env.DB.prepare('UPDATE users SET reset_code = ?, reset_expires = ? WHERE id = ?')
+    .bind(code, expires, user.id).run();
+
+  try {
+    const emailRes = await fetch('https://api.mailchannels.net/tx/v1/send', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: email, name: 'FreelancePay User' }] }],
+        from: { email: 'noreply@freelance-pay.com', name: 'FreelancePay Security' },
+        subject: 'FreelancePay - Password Reset Code',
+        content: [{ type: 'text/html', value: `<h2>Password Reset</h2><p>Your 6-digit reset code is: <strong>${code}</strong></p><p>This code will expire in 15 minutes.</p>` }]
+      })
+    });
+    const resultText = await emailRes.text();
+    if (!emailRes.ok) console.error('MailChannels Error:', resultText);
+  } catch(e) {
+    console.error('Email sending failed:', e);
+  }
+
+  return c.json({ message: 'Reset code sent!', previewCode: code });
+});
+
+app.post('/api/auth/reset-password', async (c) => {
+  const { email, code, newPassword } = await c.req.json();
+  
+  const user = await c.env.DB.prepare('SELECT id, reset_code, reset_expires FROM users WHERE email = ?').bind(email).first();
+  if (!user || user.reset_code !== code) {
+    return c.json({ error: 'Invalid or expired reset code' }, 400);
+  }
+
+  if (new Date(user.reset_expires) < new Date()) {
+    return c.json({ error: 'Reset code has expired' }, 400);
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+  
+  await c.env.DB.prepare('UPDATE users SET password = ?, reset_code = NULL, reset_expires = NULL WHERE id = ?')
+    .bind(hashedPassword, user.id).run();
+    
+  return c.json({ success: true, message: 'Password reset successfully' });
 });
 
 app.get('/api/auth/me', auth, async (c) => {
@@ -262,7 +427,7 @@ app.get('/api/auth/google/callback', async (c) => {
     if (!user) {
       const result = await c.env.DB.prepare(
         'INSERT INTO users (name, email, password, currency, email_verified, avatar, role) VALUES (?, ?, ?, ?, 1, ?, ?) RETURNING id'
-      ).bind(name, email, await bcrypt.hash(Math.random().toString(36), 10), 'USD', picture, role).first();
+      ).bind(name, email, await hashPassword(Math.random().toString(36)), 'USD', picture, role).first();
       user = { id: result.id, name, email, role, currency: 'USD' };
     } else {
       user.role = role;
@@ -280,7 +445,7 @@ app.get('/api/auth/google/callback', async (c) => {
     });
     
     // Dynamic redirect back to the app
-    const appOrigin = 'https://freelance-pay-cloud.pages.dev';
+    const appOrigin = getOrigin(c);
     return c.html(`<html><body><script>if (window.opener) { window.opener.postMessage({type: 'AUTH_SUCCESS', user: ${JSON.stringify(user)}}, '*'); window.close(); } else { window.location.href = '${appOrigin}'; }</script></body></html>`);
   } catch (e) { 
     console.error('Google Callback Error:', e);
@@ -310,7 +475,7 @@ app.post('/api/auth/google/verify', async (c) => {
     if (!user) {
       const result = await c.env.DB.prepare(
         'INSERT INTO users (name, email, password, currency, email_verified, avatar, role) VALUES (?, ?, ?, ?, 1, ?, ?) RETURNING id'
-      ).bind(name, email, await bcrypt.hash(Math.random().toString(36), 10), 'USD', picture, role).first();
+      ).bind(name, email, await hashPassword(Math.random().toString(36)), 'USD', picture, role).first();
       user = { id: result.id, name, email, role, currency: 'USD' };
     } else {
       user.role = role;
@@ -330,7 +495,9 @@ app.post('/api/auth/google/verify', async (c) => {
     return c.json({ success: true, user });
   } catch (e) {
     console.error('Verify error:', e);
-    return c.json({ error: 'Invalid Google Token' }, 401);
+    const ip = c.req.header('CF-Connecting-IP') || 'Unknown';
+    await logSecurityEvent(c, 'GOOGLE_AUTH_FAILURE', ip, `Token verification failed: ${e.message}`);
+    return c.json({ error: 'Invalid Google Token', details: e.message }, 401);
   }
 });
 
@@ -551,10 +718,10 @@ app.post('/api/bills/:id/pay', auth, async (c) => {
       }
     }
 
-    // 3. Mark current bill as paid
+    // 3. Mark current bill as paid (keep its current due_date as history)
     await c.env.DB.prepare('UPDATE bills SET status = "paid" WHERE id = ?').bind(bid).run();
 
-    // 4. Handle recurring bill generation
+    // 4. Handle recurrence: Create a new bill for the next period
     if (bill.recurrence && bill.recurrence !== 'one-time') {
       try {
         const nextDate = getNextDate(bill.due_date, bill.recurrence);
