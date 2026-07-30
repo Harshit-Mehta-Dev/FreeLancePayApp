@@ -732,6 +732,7 @@ tbody td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid rgba(25
 }
 .main-content-inner {
   padding: 24px;
+  padding-top: 88px; /* Clearance for the 72px fixed header plus spacing */
   box-sizing: border-box;
 }
 .mobile-header {
@@ -1330,6 +1331,7 @@ html.light-mode .skeleton {
 
   .main-content-inner {
     padding: 16px !important;
+    padding-top: 80px !important;
   }
 
   /* Grid Conversions */
