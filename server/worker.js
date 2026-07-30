@@ -265,7 +265,7 @@ app.post('/api/auth/login', async (c) => {
   setCookie(c, 'fp_token', token, { 
     httpOnly: true, 
     secure: true, 
-    sameSite: 'Strict', 
+    sameSite: 'Lax', 
     maxAge: 60 * 60 * 24 * 7,
     path: '/'
   });
@@ -439,7 +439,7 @@ app.get('/api/auth/google/callback', async (c) => {
     setCookie(c, 'fp_token', token, { 
       httpOnly: true, 
       secure: true, 
-      sameSite: 'Strict', 
+      sameSite: 'Lax', 
       maxAge: 60 * 60 * 24 * 7,
       path: '/'
     });

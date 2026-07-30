@@ -363,7 +363,7 @@ export default function AuthPage({ defaultMode = 'login', onSuccess, onCancel, s
                           startAnalysis(`Welcome, ${data.user.name}! Activating your Google-linked vault...`);
                           setUser(data.user);
                         } catch (err) {
-                          addToast('Google login failed', 'error');
+                          addToast(err?.response?.data?.error || 'Google login failed', 'error');
                           setLoading(false);
                         }
                       }}

@@ -1,19 +1,46 @@
 export async function onRequest(context) {
-  const url = new URL(context.request.url);
-  // Reconstruct the URL for the backend
-  const targetUrl = new URL(url.pathname + url.search, 'https://freelance-pay-api.cyber-freelance.workers.dev');
-  
-  // Clone the request
-  const request = new Request(targetUrl, context.request);
-  
-  // We need to set the Origin header to match what the backend expects if necessary,
-  // but it should be fine. We can set it to the frontend's origin just in case.
-  request.headers.set('Origin', 'https://freelance-pay-cloud.pages.dev');
+  const { request, env } = context;
+  const url = new URL(request.url);
 
-  // Send the request to the worker
-  const response = await fetch(request);
-  
-  // Create a new response to modify headers if needed, but we can just return it
-  // Pages functions automatically forward the response headers.
-  return response;
+  // Build the target URL pointing to the backend Worker
+  const targetUrl = new URL(
+    url.pathname + url.search,
+    'https://freelance-pay-api.cyber-freelance.workers.dev'
+  );
+
+  // Clone headers and set correct Origin for backend CORS check
+  const headers = new Headers(request.headers);
+  headers.set('Origin', 'https://freelance-pay-cloud.pages.dev');
+  headers.set('X-Forwarded-Host', url.host);
+
+  // Forward the request, including body for POST/PUT/PATCH
+  const proxyRequest = new Request(targetUrl.toString(), {
+    method: request.method,
+    headers,
+    body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+    redirect: 'follow',
+  });
+
+  try {
+    const response = await fetch(proxyRequest);
+
+    // Forward all response headers back to the browser
+    const responseHeaders = new Headers(response.headers);
+    
+    // Ensure cookies work cross-domain via the proxy
+    responseHeaders.delete('Access-Control-Allow-Origin');
+    responseHeaders.set('Access-Control-Allow-Origin', url.origin);
+    responseHeaders.set('Access-Control-Allow-Credentials', 'true');
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'Proxy error', details: err.message }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
