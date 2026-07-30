@@ -119,8 +119,8 @@ const NAV = [
   { id: 'feedback',  label: 'Feedback', icon: '💬', public: false },
   { id: 'bugs',      label: 'Bug Reports', icon: '🐛', public: false },
   { id: 'security',  label: 'Security', icon: '🛡️', public: false, adminOnly: true },
-  { id: 'crypto',    label: 'Crypto Hub', icon: '💎', public: false },
 ];
+
 
 
 // ─── Auth Gate Banner ──────────────────────────────────────────────────────────
@@ -212,7 +212,45 @@ function Sidebar({ page, setPage, user, logout, open, setOpen, onLogin, onRegist
         ))}
       </nav>
 
+      {/* ── FreeLancePay Guardian Banner ── */}
+      <div style={{
+        margin: '12px 0',
+        padding: '10px 12px',
+        borderRadius: 10,
+        background: 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.12), rgba(var(--secondary-rgb, 6,182,212), 0.08))',
+        border: '1px solid rgba(var(--primary-rgb), 0.2)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        cursor: 'default',
+        userSelect: 'none',
+      }}>
+        <span style={{ fontSize: 18, flexShrink: 0 }}>🛡️</span>
+        <div>
+          <div style={{
+            fontSize: 11, fontWeight: 900, color: 'var(--primary)',
+            letterSpacing: '0.5px', lineHeight: 1.2,
+          }}>FreeLancePay Guardian</div>
+          <div style={{
+            fontSize: 9, color: 'var(--text-muted)', fontWeight: 600,
+            letterSpacing: '0.3px', marginTop: 1,
+          }}>SECURITY SYSTEM ACTIVE</div>
+        </div>
+        <div style={{
+          marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%',
+          background: '#22c55e', boxShadow: '0 0 6px #22c55e',
+          flexShrink: 0, animation: 'fpg-pulse 2s ease-in-out infinite',
+        }} />
+        <style>{`
+          @keyframes fpg-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.3); }
+          }
+        `}</style>
+      </div>
+
       <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 16 }}>
+
         <div className="nav-section" style={{ paddingTop: 0 }}>Account</div>
 
         {/* ─── Theme Toggle (logged-in only) ─── */}
